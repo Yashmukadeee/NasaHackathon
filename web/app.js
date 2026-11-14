@@ -1,10 +1,69 @@
 /**
  * app.js — Mission Vitals main application controller.
- * Coordinates engine, DOM, XP/achievements, body map, charts, sound, crew view.
+ * Coordinates engine, DOM, XP/achievements, body map, charts, sound, crew view, 3D body scan.
  */
 import { CONFIG as C } from "./config.js";
 import { prepare, analyze, groundSummary, reasonLines, formatValue, LEARNING } from "./engine.js";
 import { playChime, playWarn, playXP, setMuted, isMuted } from "./sound.js";
+import { initBody3D, updateStatus as body3dUpdateStatus } from "./body3d.js";
+
+// ── Zone improvement data (mirrors body3d.js ZONES) ──────────────────────────
+const ZONE_IMPROVEMENTS = {
+  beh: {
+    label: "Mind & Mood", icon: "🧠",
+    improvements: [
+      "😴 Follow sleep wind-down: dim lights 1 hr before rest",
+      "📞 Schedule crew social or private ground call",
+      "🧘 10-min mindfulness or breathing exercise",
+      "📓 Log mood & stress daily for trend tracking",
+    ]
+  },
+  car: {
+    label: "Cardiovascular", icon: "❤️",
+    improvements: [
+      "💧 Drink 500 ml water and rest for 30 min",
+      "❤️ Measure resting HR again tomorrow morning",
+      "🚴 Add light aerobic session if cleared by protocol",
+      "📊 Check blood pressure; note dizziness or head fullness",
+    ]
+  },
+  imm: {
+    label: "Immune System", icon: "🛡️",
+    improvements: [
+      "🌡️ Log temperature every 6 hours",
+      "💧 Increase water intake; reduce workload",
+      "🤧 Distance from crew if fever or cough present",
+      "📋 Crew medical officer: record full vitals & symptoms",
+    ]
+  },
+  msk: {
+    label: "Bone & Muscle", icon: "🏋️",
+    improvements: [
+      "🏋️ Return to full resistive exercise plan immediately",
+      "📝 Log every session — trend accuracy depends on it",
+      "🥗 Maintain high-protein nutrition score (>7/10)",
+      "🩺 Report back pain or grip loss to crew medical officer",
+    ]
+  },
+  env: {
+    label: "Habitat Air (CO₂)", icon: "🌬️",
+    improvements: [
+      "🌬️ Check CO₂ scrubbers and fan operation immediately",
+      "🚶 Move to best-ventilated module in habitat",
+      "📋 Log headache, fatigue or slowed thinking symptoms",
+      "🚨 Alert crew; follow CO₂ alarm checklist",
+    ]
+  },
+  rad: {
+    label: "Radiation", icon: "☢️",
+    improvements: [
+      "🛡️ Move to storm shelter; minimise open-area exposure",
+      "⏱️ Log time in shielded vs unshielded modules",
+      "🔍 Monitor for nausea, skin redness, fatigue over 48 h",
+      "📡 Contact ground immediately during active SPE",
+    ]
+  },
+};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -492,6 +551,9 @@ function render() {
 
   // Perfect week check
   checkPerfectWeek(a);
+
+  // Sync 3D body scan zones
+  update3DBody(a);
 }
 
 function recompute() { ctx = prepare(mission.series); render(); }
@@ -658,6 +720,7 @@ async function init() {
   setupBodyMap();
   setupMute();
   setupCrewModal();
+  setup3DBody();
 
   // Initial render & XP bar
   renderXPBar();
@@ -665,6 +728,97 @@ async function init() {
 
   // Service worker
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+// ── 3D body scan setup ────────────────────────────────────────────────────────
+function setup3DBody() {
+  const canvas = $("body3d-canvas");
+  if (!canvas) return;
+
+  // Init Three.js viewer; pass callback for zone clicks
+  initBody3D(canvas, (domainId) => {
+    SEL = domainId;
+    render();
+    showImprovementsPanel(domainId);
+  });
+
+  // Build zone legend
+  buildZoneLegend();
+
+  // Dismiss button
+  const dismiss = $("impv-dismiss");
+  if (dismiss) dismiss.onclick = () => {
+    $("improvements-panel").style.display = "none";
+  };
+}
+
+// Build the colour-coded legend under the canvas
+function buildZoneLegend() {
+  const leg = $("zone-legend");
+  if (!leg) return;
+  const domains = { imm: "Immune", msk: "Bone & Muscle", car: "Heart", beh: "Mind", env: "Air", rad: "Radiation" };
+  leg.innerHTML = Object.entries(domains).map(([id, name]) =>
+    `<div class="zone-pill" data-zone="${id}">
+      <span class="zone-dot" id="zdot-${id}" style="background:#7a90aa"></span>
+      ${name}
+    </div>`
+  ).join("");
+}
+
+// Called from render() to sync 3D zone colours + improvements panel
+function update3DBody(analysis) {
+  if (!analysis) return;
+  const statusMap = {};
+  const colorMap  = { "-1": "#5ca8ff", 0: "#3ecf84", 1: "#f5be45", 2: "#ff4444" };
+  for (const dm in analysis.domains) {
+    statusMap[dm] = Math.max(-1, analysis.domains[dm].status ?? -1);
+    // Update legend dot colour
+    const dot = document.getElementById("zdot-" + dm);
+    if (dot) dot.style.background = colorMap[String(statusMap[dm])] ?? "#7a90aa";
+  }
+  // Push status to Three.js viewer
+  try { body3dUpdateStatus(statusMap); } catch (_) {}
+
+  // Auto-show improvements panel for the worst-status domain
+  const worst = analysis.overall?.worstDomain;
+  const worstStatus = worst ? (analysis.domains[worst]?.status ?? -1) : -1;
+  if (worstStatus >= 1) {
+    showImprovementsPanel(worst, worstStatus);
+  } else {
+    const panel = $("improvements-panel");
+    if (panel) panel.style.display = "none";
+  }
+}
+
+// Render the improvements panel for a given domain
+function showImprovementsPanel(domainId, status) {
+  const panel = $("improvements-panel");
+  if (!panel) return;
+  const info = ZONE_IMPROVEMENTS[domainId];
+  if (!info) return;
+
+  // Determine status from current analysis if not passed
+  let s = status;
+  if (s === undefined && ctx) {
+    const a = analyze(ctx, T);
+    s = a.domains[domainId]?.status ?? -1;
+  }
+  if (s < 1) { panel.style.display = "none"; return; }
+
+  $("impv-icon").textContent   = info.icon;
+  $("impv-title").textContent  = info.label;
+  const statusEl = $("impv-status");
+  if (s === 2) {
+    statusEl.textContent  = "■ Act Now — involve crew medical officer";
+    statusEl.className    = "impv-status s2";
+  } else {
+    statusEl.textContent  = "▲ Watch Closely — self-manage and recheck";
+    statusEl.className    = "impv-status s1";
+  }
+  $("impv-list").innerHTML = info.improvements
+    .map(t => `<li class="${s === 1 ? "warn-item" : ""}">${t}</li>`)
+    .join("");
+  panel.style.display = "block";
 }
 
 init();
