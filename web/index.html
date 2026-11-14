@@ -5,43 +5,226 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mission Vitals</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0f1620">
+<meta name="theme-color" content="#0b1220">
 <link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
+
+  <!-- ── Header ── -->
   <div class="top">
-    <div><h1>Mission Vitals</h1>
-      <div class="mu">Offline health self-monitoring on a simulated 180-day mission. Decision support, not diagnosis.</div></div>
-    <div class="row"><button id="ci">Daily check-in</button><button id="gs">Ground summary</button></div>
+    <div class="top-left">
+      <h1>🚀 Mission Vitals</h1>
+      <div class="subtitle">Offline astronaut health self-monitoring · Decision support, not diagnosis.</div>
+    </div>
+    <div class="top-right">
+      <!-- XP / Level -->
+      <div class="xp-wrap">
+        <span class="xp-label" id="xp-level">Trainee</span>
+        <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
+        <span class="xp-num" id="xp-num">0 XP</span>
+      </div>
+      <!-- Achievement badges -->
+      <div class="badges" id="badges-row">
+        <span class="badge" data-ach="iron"     title="Iron Routine — 30-day check-in streak">🏅</span>
+        <span class="badge" data-ach="warn"     title="Early Warning — opened forecast alert">📡</span>
+        <span class="badge" data-ach="ground"   title="Ground Ready — generated ground summary">📋</span>
+        <span class="badge" data-ach="perfect"  title="Perfect Week — 7 days all Normal">⭐</span>
+      </div>
+      <!-- Action buttons -->
+      <button id="ci" class="btn-primary">📋 Check-in</button>
+      <button id="gs">📡 Ground summary</button>
+      <button id="crew-btn" title="Crew Ripple comparison">👥 Crew</button>
+      <button id="mute-btn" class="icon-btn" title="Toggle sound alerts">🔊</button>
+    </div>
   </div>
 
+  <!-- ── Timeline controls ── -->
   <section class="ctl" aria-label="Mission timeline">
-    <div class="row"><strong id="dl">Day 1</strong><span class="mu" id="ph"></span></div>
-    <div class="row"><button id="pl">Play</button>
-      <input id="sl" type="range" min="1" max="180" value="30" aria-label="Mission day"></div>
-    <div class="row" id="jm"></div>
+    <div class="row" style="margin-bottom:8px">
+      <strong class="day-label" id="dl">Day 1</strong>
+      <span class="phase-badge" id="ph">Cruise</span>
+      <div style="flex:1"></div>
+      <button id="pl">▶ Play</button>
+    </div>
+    <div class="row">
+      <input id="sl" type="range" min="1" max="180" value="30" aria-label="Mission day">
+    </div>
+    <div class="row" id="jm" style="margin-top:8px"></div>
   </section>
 
+  <!-- ── Banner (solar event etc.) ── -->
   <div id="bn"></div>
-  <section class="sum">
-    <div class="panel"><h2>Mission health summary</h2><div class="big" id="ov"></div><div class="mu" id="ovs"></div>
-      <h3>Next action</h3><div id="na"></div></div>
-    <div class="panel"><h2>Top concerns</h2><div id="tc"></div><h3>Forecast</h3><div id="fc"></div></div>
+
+  <!-- ── Summary row ── -->
+  <section class="sum" aria-label="Mission health summary">
+    <div class="panel">
+      <h2>Mission health</h2>
+      <div class="health-ring-wrap">
+        <!-- SVG ring gauge rendered by JS in #ring-svg -->
+        <svg id="ring-svg" width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
+          <circle class="ring-track" cx="40" cy="40" r="34"/>
+          <circle class="ring-fill" id="ring-fill" cx="40" cy="40" r="34"
+            stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="var(--ok)"/>
+        </svg>
+        <div>
+          <div class="big" id="ov"></div>
+          <div class="mu" id="ovs"></div>
+        </div>
+      </div>
+      <h3>Next action</h3>
+      <div id="na"></div>
+    </div>
+    <div class="panel">
+      <h2>Top concerns</h2>
+      <div id="tc"></div>
+      <h3>Forecast</h3>
+      <div id="fc"></div>
+    </div>
   </section>
-  <div class="grid" id="gr"></div>
-  <section class="panel" id="dt" aria-live="polite"></section>
-  <p class="mu">All data is simulated. Thresholds are placeholders for review by a flight surgeon. No medicine doses are suggested: follow your onboard medical protocol.</p>
+
+  <!-- ── Main layout: body map + domain grid ── -->
+  <div class="main-layout">
+
+    <!-- Human body SVG sidebar -->
+    <div class="body-sidebar">
+      <div class="body-map-wrap">
+        <h3>Body map</h3>
+        <!-- Simplified anatomical SVG — regions are clickable -->
+        <svg id="body-map" viewBox="0 0 100 240" xmlns="http://www.w3.org/2000/svg" aria-label="Clickable body health map">
+
+          <!-- HEAD — beh (Mind & mood) -->
+          <g class="body-region" data-domain="beh" aria-label="Head — Mind and mood">
+            <ellipse cx="50" cy="22" rx="16" ry="18" fill="var(--na)" opacity=".9"/>
+            <!-- face features -->
+            <circle cx="44" cy="20" r="2" fill="rgba(0,0,0,.3)"/>
+            <circle cx="56" cy="20" r="2" fill="rgba(0,0,0,.3)"/>
+            <path d="M44 29 Q50 33 56 29" stroke="rgba(0,0,0,.3)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </g>
+
+          <!-- NECK -->
+          <rect x="44" y="39" width="12" height="8" rx="3" fill="var(--pn2)" opacity=".5"/>
+
+          <!-- TORSO — car (Heart / chest) -->
+          <g class="body-region" data-domain="car" aria-label="Chest — Cardiovascular">
+            <rect x="30" y="47" width="40" height="38" rx="8" fill="var(--na)" opacity=".9"/>
+            <!-- heart icon -->
+            <path d="M45 61 Q45 55 50 57 Q55 55 55 61 Q55 67 50 72 Q45 67 45 61Z" fill="rgba(255,96,88,.55)"/>
+          </g>
+
+          <!-- LUNGS overlay — env (Habitat air) -->
+          <g class="body-region" data-domain="env" aria-label="Lungs — Habitat air">
+            <ellipse cx="38" cy="60" rx="7" ry="11" fill="rgba(94,195,255,.35)" opacity=".9"/>
+            <ellipse cx="62" cy="60" rx="7" ry="11" fill="rgba(94,195,255,.35)" opacity=".9"/>
+          </g>
+
+          <!-- ABDOMEN area -->
+          <rect x="32" y="84" width="36" height="16" rx="6" fill="var(--pn2)" opacity=".45"/>
+
+          <!-- IMMUNE full-body glow — imm -->
+          <g class="body-region" data-domain="imm" aria-label="Immune system — whole body">
+            <!-- Full body outline, slightly larger -->
+            <ellipse cx="50" cy="22" rx="19" ry="21" fill="none" stroke="var(--na)" stroke-width="2.5" opacity=".35"/>
+            <rect x="27" y="44" width="46" height="100" rx="10" fill="none" stroke="var(--na)" stroke-width="2.5" opacity=".35"/>
+            <!-- small shield icon in lower abdomen -->
+            <path d="M44 93 L50 90 L56 93 L56 101 Q50 105 44 101 Z" fill="rgba(62,207,132,.35)" stroke="rgba(62,207,132,.6)" stroke-width="1"/>
+          </g>
+
+          <!-- LEFT ARM — msk (Bone & muscle) -->
+          <g class="body-region" data-domain="msk" aria-label="Arms — Bone and muscle">
+            <rect x="14" y="50" width="14" height="38" rx="7" fill="var(--na)" opacity=".88"/>
+            <rect x="72" y="50" width="14" height="38" rx="7" fill="var(--na)" opacity=".88"/>
+            <!-- hands -->
+            <ellipse cx="21" cy="92" rx="8" ry="6" fill="var(--na)" opacity=".75"/>
+            <ellipse cx="79" cy="92" rx="8" ry="6" fill="var(--na)" opacity=".75"/>
+            <!-- dumbbell icon suggestion -->
+            <line x1="17" y1="66" x2="25" y2="66" stroke="rgba(0,0,0,.2)" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="75" y1="66" x2="83" y2="66" stroke="rgba(0,0,0,.2)" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+
+          <!-- LEGS -->
+          <rect x="33" y="100" width="13" height="52" rx="7" fill="var(--pn2)" opacity=".5"/>
+          <rect x="54" y="100" width="13" height="52" rx="7" fill="var(--pn2)" opacity=".5"/>
+          <!-- feet -->
+          <ellipse cx="39" cy="156" rx="9" ry="5" fill="var(--pn2)" opacity=".45"/>
+          <ellipse cx="61" cy="156" rx="9" ry="5" fill="var(--pn2)" opacity=".45"/>
+
+          <!-- RADIATION — full body glow overlay -->
+          <g class="body-region" data-domain="rad" aria-label="Radiation — whole body">
+            <ellipse cx="50" cy="100" rx="52" ry="100" fill="none" stroke="var(--wn)" stroke-width="1.5" opacity=".22" stroke-dasharray="4 4"/>
+            <!-- radiation icon near head -->
+            <text x="50" y="8" text-anchor="middle" font-size="10" fill="var(--wn)" opacity=".6">☢</text>
+          </g>
+        </svg>
+
+        <!-- Domain color legend -->
+        <div class="domain-legend" id="domain-legend"></div>
+      </div>
+    </div>
+
+    <!-- Domain cards + detail panel -->
+    <div>
+      <div class="grid" id="gr"></div>
+      <section class="panel" id="dt" aria-live="polite"></section>
+    </div>
+  </div>
+
+  <p class="disclaimer">All data is simulated. Thresholds are placeholders for review by a flight surgeon.
+    No medicine doses are suggested — follow your onboard medical protocol.</p>
 </main>
 
-<dialog id="dg"><h2>Ground summary (last 14 days)</h2><pre id="gt"></pre>
-  <div class="row"><button id="cp">Copy</button><button id="cl">Close</button></div><div class="mu" id="cm"></div></dialog>
+<!-- ── Tooltip (body map hover) ── -->
+<div class="body-tooltip" id="body-tooltip"></div>
 
-<dialog id="cd"><h2>Daily check-in</h2>
-  <p class="mu">Takes 20 seconds. Saved on this device only and applied to the current mission day.</p>
+<!-- ── Ground Summary dialog ── -->
+<dialog id="dg">
+  <h2>📡 Ground summary (last 14 days)</h2>
+  <pre id="gt"></pre>
+  <div class="row" style="margin-top:12px">
+    <button id="cp" class="btn-primary">Copy</button>
+    <button id="cl">Close</button>
+  </div>
+  <div class="mu" id="cm" style="margin-top:8px"></div>
+</dialog>
+
+<!-- ── Daily Check-in dialog ── -->
+<dialog id="cd">
+  <h2>📋 Daily check-in</h2>
+  <p class="mu">Takes ~30 seconds. Saved on this device only. Applied to current mission day.</p>
   <div id="cf"></div>
-  <div class="row"><button id="cs">Save check-in</button><button id="cx">Cancel</button></div></dialog>
+  <div class="row" style="margin-top:16px">
+    <button id="cs" class="btn-primary">Save check-in</button>
+    <button id="cx">Cancel</button>
+  </div>
+</dialog>
+
+<!-- ── Educational info dialog ── -->
+<dialog id="edu-modal">
+  <div class="edu-modal-content">
+    <h2 id="edu-title"></h2>
+    <p id="edu-about" class="mu"></p>
+    <h3>Why it matters in space (NASA HRP)</h3>
+    <p id="edu-nasa"></p>
+    <h3>What to do at each tier</h3>
+    <ul class="edu-tiers" id="edu-tiers"></ul>
+    <div class="row" style="margin-top:16px">
+      <button id="edu-close" class="btn-primary">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Crew Ripple dialog ── -->
+<dialog id="crew-modal">
+  <h2>👥 Crew Ripple — Health Comparison</h2>
+  <p class="mu">Compare crew members to separate personal illness from shared habitat problems.
+    <em>Synthetic data for demonstration.</em></p>
+  <div class="crew-grid" id="crew-grid"></div>
+  <div class="row" style="margin-top:14px">
+    <button id="crew-close" class="btn-primary">Close</button>
+  </div>
+</dialog>
+
 <script type="module" src="app.js"></script>
 </body>
 </html>
