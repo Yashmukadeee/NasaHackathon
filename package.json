@@ -1,0 +1,12 @@
+{
+  "name": "mission-vitals",
+  "version": "1.0.0",
+  "description": "Offline astronaut health self-monitoring (hackathon project)",
+  "type": "module",
+  "scripts": {
+    "data": "python3 simulator/simulate.py --all",
+    "test": "node --test tests/*.test.mjs",
+    "eval": "node eval/evaluate.mjs",
+    "start": "python3 -m http.server 8080 --directory web"
+  }
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mission Vitals</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1620">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>Mission Vitals</h1>
+      <div class="mu">Offline health self-monitoring on a simulated 180-day mission. Decision support, not diagnosis.</div></div>
+    <div class="row"><button id="ci">Daily check-in</button><button id="gs">Ground summary</button></div>
+  </div>
+
+  <section class="ctl" aria-label="Mission timeline">
+    <div class="row"><strong id="dl">Day 1</strong><span class="mu" id="ph"></span></div>
+    <div class="row"><button id="pl">Play</button>
+      <input id="sl" type="range" min="1" max="180" value="30" aria-label="Mission day"></div>
+    <div class="row" id="jm"></div>
+  </section>
+
+  <div id="bn"></div>
+  <section class="sum">
+    <div class="panel"><h2>Mission health summary</h2><div class="big" id="ov"></div><div class="mu" id="ovs"></div>
+      <h3>Next action</h3><div id="na"></div></div>
+    <div class="panel"><h2>Top concerns</h2><div id="tc"></div><h3>Forecast</h3><div id="fc"></div></div>
+  </section>
+  <div class="grid" id="gr"></div>
+  <section class="panel" id="dt" aria-live="polite"></section>
+  <p class="mu">All data is simulated. Thresholds are placeholders for review by a flight surgeon. No medicine doses are suggested: follow your onboard medical protocol.</p>
+</main>
+
+<dialog id="dg"><h2>Ground summary (last 14 days)</h2><pre id="gt"></pre>
+  <div class="row"><button id="cp">Copy</button><button id="cl">Close</button></div><div class="mu" id="cm"></div></dialog>
+
+<dialog id="cd"><h2>Daily check-in</h2>
+  <p class="mu">Takes 20 seconds. Saved on this device only and applied to the current mission day.</p>
+  <div id="cf"></div>
+  <div class="row"><button id="cs">Save check-in</button><button id="cx">Cancel</button></div></dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>
