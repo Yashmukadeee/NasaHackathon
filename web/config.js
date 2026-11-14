@@ -50,42 +50,52 @@ export const CONFIG = {
     env: "Habitat air",
     rad: "Radiation",
   },
-  // Educational descriptions for each domain (NASA HRP context)
+  // Educational descriptions for each domain (NASA HRP context + source links)
   domainEdu: {
     imm: {
       title: "Immune System",
       about: "Tracks temperature, fatigue, and hydration to detect infection or immune dysregulation early.",
       nasa: "Spaceflight causes significant immune dysregulation: T-cell counts drop, latent viruses reactivate, and wound healing slows. Even a mild infection can escalate rapidly when crew medical resources are limited.",
+      source: { label: "NASA HRP — Risks of Human Spaceflight", url: "https://www.nasa.gov/hrp/risks/" },
+      csaSource: { label: "CSA — Monitoring Radiation for Astronaut Health", url: "https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp" },
       tiers: ["Tier 1: Rest, hydrate, track temperature every 6 hours.", "Tier 2: Crew medical officer records full vitals and symptoms.", "Tier 3: Contact ground immediately — infection in space can escalate fast."]
     },
     msk: {
       title: "Bone & Muscle",
       about: "Monitors exercise minutes, grip strength, and nutrition to track musculoskeletal health.",
       nasa: "Without gravity loading, astronauts lose 1–2% bone density and up to 20% muscle mass per month. NASA's HRP mandates 2.5 hours of daily resistive exercise to counter this. Early detection of missed sessions prevents cumulative loss.",
+      source: { label: "NASA HRP — Risks of Human Spaceflight", url: "https://www.nasa.gov/hrp/risks/" },
+      csaSource: { label: "CSA — Why Conduct Science Experiments in Space?", url: "https://www.asc-csa.gc.ca/eng/iss/science/why-do-we-conduct-science-experiments-in-space.asp" },
       tiers: ["Tier 1: Return to full exercise plan, prioritize resistive training.", "Tier 2: Crew medical officer reviews hardware and missed sessions.", "Tier 3: Report new back pain or grip strength decline to ground."]
     },
     car: {
       title: "Cardiovascular",
       about: "Monitors resting heart rate, HRV, and blood pressure — key indicators of cardiac stress and autonomic regulation.",
       nasa: "Microgravity causes the heart to work less against gravity, leading to deconditioning, orthostatic intolerance, and in long missions, potentially cardiac atrophy. Fluid shifts alter blood pressure and can mask true cardiovascular state.",
+      source: { label: "NASA HRP — 5 Hazards of Human Spaceflight", url: "https://www.nasa.gov/hrp/hazards/" },
       tiers: ["Tier 1: Hydrate, rest, repeat readings at the same time tomorrow.", "Tier 2: Crew medical officer measures blood pressure and checks for dizziness.", "Tier 3: Multiple cardiovascular alerts — ground consultation required."]
     },
     beh: {
       title: "Mind & Mood",
       about: "Tracks sleep, mood, stress, headaches, and fatigue to monitor behavioral health and cognitive performance.",
       nasa: "Isolation, confinement, monotony, and mission risk are known psychological stressors in long-duration spaceflight. NASA's behavioral health program monitors crews for depression, interpersonal conflict, and performance degradation.",
+      source: { label: "NASA HRP — 5 Hazards: Isolation & Confinement", url: "https://www.nasa.gov/hrp/hazards/" },
+      csaSource: { label: "CSA — Why Conduct Science Experiments in Space?", url: "https://www.asc-csa.gc.ca/eng/iss/science/why-do-we-conduct-science-experiments-in-space.asp" },
       tiers: ["Tier 1: Sleep hygiene routine; schedule social or private crew time.", "Tier 2: Crew medical officer psychological check-in.", "Tier 3: Request ground behavioral health consultation."]
     },
     env: {
       title: "Habitat Air",
       about: "Monitors cabin CO2 levels. Elevated CO2 can mimic and amplify health problems.",
       nasa: "CO2 at levels as low as 0.5% (5000 ppm) can cause headaches, fatigue, and cognitive impairment in crew. Closed-loop life support must be constantly monitored — CO2 symptoms are easily confused with illness.",
+      source: { label: "NASA HRP — Hostile Closed Environment Hazard", url: "https://www.nasa.gov/hrp/hazards/" },
       tiers: ["Tier 1: Check scrubbers and fans; move to better-ventilated module.", "Tier 2: Follow the CO2 alarm checklist; alert all crew.", "Tier 3: Report to ground if CO2 does not fall within 30 minutes."]
     },
     rad: {
       title: "Radiation",
       about: "Tracks daily radiation dose and cumulative mission dose against career limits.",
       nasa: "Beyond Earth's magnetosphere, astronauts receive 200–300× more radiation than on the surface. Acute solar particle events can cause radiation sickness within hours. Cumulative dose raises lifetime cancer and CNS risk.",
+      source: { label: "NASA HRP — Space Radiation Hazard", url: "https://www.nasa.gov/hrp/hazards/" },
+      csaSource: { label: "CSA — Monitoring Radiation for Astronaut Health", url: "https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp" },
       tiers: ["Tier 1: Review time in shielded vs unshielded areas; log symptoms.", "Tier 2: Move to storm shelter; crew medical officer monitors.", "Tier 3: Active solar particle event — shelter now and contact ground."]
     }
   },

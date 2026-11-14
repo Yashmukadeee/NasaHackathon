@@ -172,6 +172,70 @@
 
   <p class="disclaimer">All data is simulated. Thresholds are placeholders for review by a flight surgeon.
     No medicine doses are suggested — follow your onboard medical protocol.</p>
+
+  <!-- ── Resources footer ── -->
+  <footer class="resources-footer">
+    <div class="resources-inner">
+      <div class="resources-col">
+        <div class="resources-agency">
+          <span class="agency-logo">🛸</span>
+          <strong>NASA Human Research Program</strong>
+        </div>
+        <ul class="resources-list">
+          <li>
+            <a href="https://www.nasa.gov/hrp/hazards/" target="_blank" rel="noopener">
+              5 Hazards of Human Spaceflight
+            </a>
+            <span class="res-desc">Space radiation, isolation, distance, gravity, hostile environment</span>
+          </li>
+          <li>
+            <a href="https://www.nasa.gov/hrp/risks/" target="_blank" rel="noopener">
+              Risks of Human Spaceflight
+            </a>
+            <span class="res-desc">Immune changes, bone loss, cardiovascular events, behavioral health</span>
+          </li>
+          <li>
+            <a href="https://www.nasa.gov/hrp/ongoing-hrp-research/" target="_blank" rel="noopener">
+              Ongoing HRP Research in Space
+            </a>
+            <span class="res-desc">Active investigations aboard the ISS and beyond</span>
+          </li>
+        </ul>
+      </div>
+      <div class="resources-col">
+        <div class="resources-agency">
+          <span class="agency-logo">🍁</span>
+          <strong>Canadian Space Agency (CSA)</strong>
+        </div>
+        <ul class="resources-list">
+          <li>
+            <a href="https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp" target="_blank" rel="noopener">
+              Monitoring Radiation for Astronaut Health
+            </a>
+            <span class="res-desc">Canadian technologies measuring radiation exposure in space</span>
+          </li>
+          <li>
+            <a href="https://www.asc-csa.gc.ca/eng/iss/science/why-do-we-conduct-science-experiments-in-space.asp" target="_blank" rel="noopener">
+              Why Conduct Science Experiments in Space?
+            </a>
+            <span class="res-desc">How ISS research advances human health and future exploration</span>
+          </li>
+        </ul>
+      </div>
+      <div class="resources-col resources-col--disclaimer">
+        <p>
+          <strong>Mission Vitals</strong> is a hackathon project built for NASA's
+          <em>Space Apps Challenge</em>. Health domain descriptions, risk thresholds,
+          and educational content are informed by the NASA HRP and CSA resources listed here.
+        </p>
+        <p>
+          NASA does not endorse this tool. All data is simulated. This is decision
+          support, not a medical diagnosis. Follow your onboard medical protocol.
+        </p>
+        <p class="res-license">© 2026 Mission Vitals Team · MIT License</p>
+      </div>
+    </div>
+  </footer>
 </main>
 
 <!-- ── Tooltip (body map hover) ── -->
@@ -208,6 +272,7 @@
     <p id="edu-nasa"></p>
     <h3>What to do at each tier</h3>
     <ul class="edu-tiers" id="edu-tiers"></ul>
+    <div class="edu-sources" id="edu-sources"></div>
     <div class="row" style="margin-top:16px">
       <button id="edu-close" class="btn-primary">Close</button>
     </div>

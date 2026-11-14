@@ -636,3 +636,144 @@ label { display: block; margin: 12px 0 3px; font-weight: 500; }
   padding-top: 16px;
   border-top: 1px solid var(--ln);
 }
+
+/* ── Resources Footer ── */
+.resources-footer {
+  margin-top: 40px;
+  border-top: 1px solid var(--ln);
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 28px 24px 20px;
+  animation: fadeIn 0.5s ease both;
+}
+
+.resources-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 28px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+@media (max-width: 860px) {
+  .resources-inner {
+    grid-template-columns: 1fr 1fr;
+  }
+  .resources-col--disclaimer {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 540px) {
+  .resources-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.resources-agency {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.agency-logo {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.resources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resources-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resources-list a {
+  color: var(--ac);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+.resources-list a:hover {
+  color: var(--tx);
+  text-decoration: underline;
+}
+
+.res-desc {
+  color: var(--mu);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.resources-col--disclaimer {
+  border-top: 1px solid var(--ln);
+  padding-top: 16px;
+}
+
+@media (min-width: 861px) {
+  .resources-col--disclaimer {
+    border-top: none;
+    border-left: 1px solid var(--ln);
+    padding-top: 0;
+    padding-left: 24px;
+  }
+}
+
+.resources-col--disclaimer p {
+  color: var(--mu);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
+.res-license {
+  color: var(--na);
+  font-size: 0.75rem;
+  margin-top: 14px !important;
+}
+
+/* ── Edu modal source links ── */
+.edu-sources {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ln);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edu-sources:empty { display: none; }
+
+.edu-sources-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mu);
+  margin-bottom: 4px;
+}
+
+.edu-sources a {
+  color: var(--ac);
+  font-size: 0.84rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.edu-sources a:hover {
+  color: var(--tx);
+  text-decoration: underline;
+}

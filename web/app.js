@@ -334,6 +334,16 @@ function showEduModal(dm) {
   $("edu-about").textContent = edu.about;
   $("edu-nasa").textContent  = edu.nasa;
   $("edu-tiers").innerHTML   = edu.tiers.map(t => `<li>${t}</li>`).join("");
+
+  // Source links
+  const srcEl = $("edu-sources");
+  if (srcEl) {
+    const links = [];
+    if (edu.source)    links.push(`<a href="${edu.source.url}" target="_blank" rel="noopener">📖 ${edu.source.label}</a>`);
+    if (edu.csaSource) links.push(`<a href="${edu.csaSource.url}" target="_blank" rel="noopener">🍁 ${edu.csaSource.label}</a>`);
+    srcEl.innerHTML = links.length ? `<div class="edu-sources-label">Sources</div>` + links.join("") : "";
+  }
+
   $("edu-modal").showModal();
 }
 
