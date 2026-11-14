@@ -1,0 +1,2 @@
+web/model/*.obj filter=lfs diff=lfs merge=lfs -text
+web/model/*.png filter=lfs diff=lfs merge=lfs -text
