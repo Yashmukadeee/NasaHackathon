@@ -129,6 +129,7 @@ _ROUTER_IMPORTS = [
     ("app.routers.ground_team", "router"),
     ("app.routers.mission", "router"),
     ("app.routers.devices", "router"),
+    ("app.routers.sync", "router"),
 ]
 
 for _module_path, _attr in _ROUTER_IMPORTS:

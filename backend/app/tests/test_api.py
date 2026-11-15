@@ -83,3 +83,46 @@ def test_emergency_report_creation_and_status():
         stat_data = stat_res.json()
         assert stat_data["report_id"] == report_id
         assert stat_data["communication_status"] in ("queued", "transmitted")
+
+
+def test_sync_router_and_new_endpoints():
+    with TestClient(app) as client:
+        # 1. Sync pending
+        pending_res = client.get("/api/v1/sync/pending")
+        assert pending_res.status_code == 200
+        assert "pending_emergency_reports_count" in pending_res.json()
+
+        # 2. Batch sync
+        sync_res = client.post("/api/v1/sync/batch", json={
+            "astronaut_id": "ASTRO-1",
+            "records": [
+                {
+                    "record_type": "telemetry",
+                    "astronaut_id": "ASTRO-1",
+                    "mission_day": 50,
+                    "data": {"hr": 72, "spo2": 98.0, "source": "test_sync"}
+                }
+            ]
+        })
+        assert sync_res.status_code == 200
+        assert sync_res.json()["synced_count"] == 1
+
+        # 3. Overall communication status
+        comm_res = client.get("/api/v1/ground-team/communication-status")
+        assert comm_res.status_code == 200
+        assert comm_res.json()["link_state"] == "NOMINAL_UPLINK"
+
+        # 4. Research analyze
+        res_an = client.post("/api/v1/research/analyze", json={"domain": "car", "tier": 1})
+        assert res_an.status_code == 200
+        assert "evidence" in res_an.json()
+
+        # 5. Analysis latest
+        latest_res = client.get("/api/v1/analysis/ASTRO-1/latest")
+        assert latest_res.status_code == 200
+        assert latest_res.json()["astronaut_id"] == "ASTRO-1"
+
+        # 6. Alerts by astronaut
+        alerts_res = client.get("/api/v1/alerts/ASTRO-1")
+        assert alerts_res.status_code == 200
+        assert isinstance(alerts_res.json(), list)

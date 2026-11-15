@@ -312,45 +312,58 @@
                       fill="none" stroke="#42B9E8" stroke-width="1.8" />
                   </g>
 
-                  <!-- Interactive Organ Hotspots -->
+                  <!-- Interactive Organ & Anatomical Hotspots (10 Clinical Regions) -->
                   <g id="twin-organs-group" class="twin-layer">
-                    <!-- Cranial / Brain (beh) -->
-                    <g class="twin-hotspot" data-domain="beh" data-organ="brain" id="hotspot-brain">
-                      <ellipse cx="200" cy="72" rx="17" ry="20" fill="none" stroke="#36E6D0"
-                        stroke-width="2" />
+                    <!-- 1. Brain & Neurological (beh) -->
+                    <g class="twin-hotspot" data-domain="beh" data-organ="brain" id="hotspot-brain" title="Brain & Central Nervous System">
+                      <ellipse cx="200" cy="72" rx="17" ry="20" fill="rgba(54, 230, 208, 0.2)" stroke="#36E6D0" stroke-width="2" />
                       <circle cx="200" cy="72" r="4" fill="#36E6D0" class="pulse-node" />
                     </g>
-                    <!-- Heart (car) -->
-                    <g class="twin-hotspot" data-domain="car" data-organ="heart" id="hotspot-heart">
-                      <path
-                        d="M195,170 C190,160 175,165 180,180 C185,195 200,205 200,205 C200,205 215,195 220,180 C225,165 210,160 205,170 Z"
-                        fill="rgba(255, 94, 104, 0.25)" stroke="#FF5E68" stroke-width="2" class="beating-heart" />
+                    <!-- 2. Cardiovascular System / Aortic Arch (car) -->
+                    <g class="twin-hotspot" data-domain="car" data-organ="cardiovascular" id="hotspot-cardiovascular" title="Cardiovascular System & Aortic Arch">
+                      <path d="M190,140 Q200,128 210,140 L206,170 L194,170 Z" fill="rgba(255, 94, 104, 0.25)" stroke="#FF5E68" stroke-width="1.8" />
                     </g>
-                    <!-- Lungs (env) -->
-                    <g class="twin-hotspot" data-domain="env" data-organ="lungs" id="hotspot-lungs">
-                      <ellipse cx="178" cy="180" rx="14" ry="22" fill="none" stroke="#42B9E8"
-                        stroke-width="1.5" />
-                      <ellipse cx="222" cy="180" rx="14" ry="22" fill="none" stroke="#42B9E8"
-                        stroke-width="1.5" />
+                    <!-- 3. Heart & Lead II Rhythm (car) -->
+                    <g class="twin-hotspot" data-domain="car" data-organ="heart" id="hotspot-heart" title="Cardiac Myocardium & Conduction">
+                      <path d="M195,170 C190,160 175,165 180,180 C185,195 200,205 200,205 C200,205 215,195 220,180 C225,165 210,160 205,170 Z"
+                        fill="rgba(255, 94, 104, 0.4)" stroke="#FF5E68" stroke-width="2" class="beating-heart" />
                     </g>
-                    <!-- Abdomen / Immune (imm) -->
-                    <g class="twin-hotspot" data-domain="imm" data-organ="abdomen" id="hotspot-abdomen">
-                      <ellipse cx="200" cy="240" rx="26" ry="18" fill="none" stroke="#42B9E8"
-                        stroke-width="1.8" />
+                    <!-- 4. Lungs & Habitat Gas Exchange (env) -->
+                    <g class="twin-hotspot" data-domain="env" data-organ="lungs" id="hotspot-lungs" title="Pulmonary System & Alveolar Exchange">
+                      <ellipse cx="178" cy="180" rx="14" ry="22" fill="rgba(54, 185, 232, 0.25)" stroke="#42B9E8" stroke-width="1.5" />
+                      <ellipse cx="222" cy="180" rx="14" ry="22" fill="rgba(54, 185, 232, 0.25)" stroke="#42B9E8" stroke-width="1.5" />
                     </g>
-                    <!-- Upper Limbs / Grip (msk) -->
-                    <g class="twin-hotspot" data-domain="msk" data-organ="arms" id="hotspot-arms">
-                      <rect x="110" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.15)"
-                        stroke="rgba(66, 185, 232, 0.5)" stroke-width="1.2" />
-                      <rect x="266" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.15)"
-                        stroke="rgba(66, 185, 232, 0.5)" stroke-width="1.2" />
+                    <!-- 5. Abdomen & Gastrointestinal / Immune (imm) -->
+                    <g class="twin-hotspot" data-domain="imm" data-organ="abdomen" id="hotspot-abdomen" title="Abdominal Viscera & Immune Spleen/Gut">
+                      <ellipse cx="200" cy="240" rx="26" ry="18" fill="rgba(0, 230, 208, 0.25)" stroke="#36E6D0" stroke-width="1.8" />
                     </g>
-                    <!-- Lower Limbs (msk) -->
-                    <g class="twin-hotspot" data-domain="msk" data-organ="legs" id="hotspot-legs">
-                      <rect x="156" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.12)"
-                        stroke="rgba(66, 185, 232, 0.4)" stroke-width="1.2" />
-                      <rect x="210" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.12)"
-                        stroke="rgba(66, 185, 232, 0.4)" stroke-width="1.2" />
+                    <!-- 6. Spine / Vertebral Axis (msk) -->
+                    <g class="twin-hotspot" data-domain="msk" data-organ="spine" id="hotspot-spine" title="Spine & Intervertebral Discs">
+                      <line x1="200" y1="102" x2="200" y2="280" stroke="#00E6D0" stroke-width="4" stroke-dasharray="6 3" />
+                    </g>
+                    <!-- 7. Skeletal Bones / Pelvis & Femoral Shafts (msk) -->
+                    <g class="twin-hotspot" data-domain="msk" data-organ="bones" id="hotspot-bones" title="Skeletal Bone Mineral Density">
+                      <path d="M172,268 C182,252 218,252 228,268 C232,284 218,294 200,294 C182,294 168,284 172,268 Z"
+                        fill="rgba(54, 185, 232, 0.22)" stroke="#36B9E8" stroke-width="1.8" />
+                    </g>
+                    <!-- 8. Core Postural Musculature (msk) -->
+                    <g class="twin-hotspot" data-domain="msk" data-organ="muscles" id="hotspot-muscles" title="Postural Anti-Gravity Musculature">
+                      <path d="M164,196 L164,250 L184,250 L184,196 Z M216,196 L216,250 L236,250 L236,196 Z"
+                        fill="rgba(245, 185, 66, 0.2)" stroke="#F5B942" stroke-width="1.4" />
+                    </g>
+                    <!-- 9. Upper Limbs / Dynamometry Arms (msk) -->
+                    <g class="twin-hotspot" data-domain="msk" data-organ="arms" id="hotspot-arms" title="Upper Limbs & Grip Dynamometry">
+                      <rect x="110" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.18)"
+                        stroke="rgba(66, 185, 232, 0.6)" stroke-width="1.4" />
+                      <rect x="266" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.18)"
+                        stroke="rgba(66, 185, 232, 0.6)" stroke-width="1.4" />
+                    </g>
+                    <!-- 10. Lower Limbs (msk) -->
+                    <g class="twin-hotspot" data-domain="msk" data-organ="legs" id="hotspot-legs" title="Lower Limbs & Calf Fluid Redistribution">
+                      <rect x="156" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.16)"
+                        stroke="rgba(66, 185, 232, 0.55)" stroke-width="1.4" />
+                      <rect x="210" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.16)"
+                        stroke="rgba(66, 185, 232, 0.55)" stroke-width="1.4" />
                     </g>
                   </g>
                 </svg>

@@ -49,3 +49,27 @@ async def refresh_research_sources():
         "message": "Research knowledge base refresh cycle executed.",
         "results": results,
     }
+
+
+@router.post("/analyze")
+async def analyze_research_evidence(payload: dict):
+    """
+    Connects observed clinical anomalies to verified NASA HRP and CSA research evidence.
+    Returns associated NASA hazards, risks, findings, and traceable references.
+    """
+    domain = payload.get("domain", "car")
+    tier = int(payload.get("tier", 1))
+
+    evidence = get_evidence_for_alert(domain, tier)
+    domain_findings = get_findings_for_domain(domain)
+
+    return {
+        "domain": domain,
+        "tier": tier,
+        "evidence": evidence,
+        "matching_findings_count": len(domain_findings),
+        "verified_citations": [
+            s for s in RESEARCH_SOURCES if s.get("status") == "verified"
+        ],
+        "disclaimer": "Traceable scientific evidence grounded in NASA HRP and CSA space medicine literature.",
+    }

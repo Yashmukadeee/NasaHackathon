@@ -69,6 +69,35 @@ async def list_critical_alerts(db: AsyncSession = Depends(get_db)):
     ]
 
 
+@router.get("/{astronaut_id}")
+async def list_alerts_for_astronaut(
+    astronaut_id: str,
+    tier: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Alert).where(Alert.astronaut_id == astronaut_id)
+    if tier is not None:
+        query = query.where(Alert.tier == tier)
+    query = query.order_by(Alert.id.desc())
+
+    result = await db.execute(query)
+    records = result.scalars().all()
+
+    return [
+        {
+            "id": a.id,
+            "astronaut_id": a.astronaut_id,
+            "mission_day": a.mission_day,
+            "tier": a.tier,
+            "domain": a.domain,
+            "message": a.message,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+        }
+        for a in records
+    ]
+
+
 @router.post("")
 async def create_alert(alert_in: AlertCreate, db: AsyncSession = Depends(get_db)):
     alert = Alert(

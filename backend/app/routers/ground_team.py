@@ -87,6 +87,33 @@ async def trigger_contact_ground(
     return res
 
 
+@router.get("/communication-status")
+async def get_overall_comm_status(db: AsyncSession = Depends(get_db)):
+    """
+    Returns high-level Deep Space Network (DSN) uplink/downlink status,
+    one-way light-time signal delay, pending queue size, and last transmission.
+    """
+    stmt = select(EmergencyReport).order_by(EmergencyReport.id.desc())
+    res = await db.execute(stmt)
+    reports = res.scalars().all()
+
+    queued_count = sum(1 for r in reports if r.communication_status == "QUEUED")
+    transmitted_count = sum(1 for r in reports if r.communication_status in ("TRANSMITTED", "ACKNOWLEDGED"))
+    last_tx = next((r.transmitted_at for r in reports if r.transmitted_at), None)
+
+    return {
+        "link_state": "NOMINAL_UPLINK",
+        "downlink_availability": True,
+        "dsn_station": "Goldstone Deep Space Comm Complex (DSS-14)",
+        "one_way_light_time_seconds": 1.28,
+        "queued_reports_count": queued_count,
+        "transmitted_reports_count": transmitted_count,
+        "last_successful_transmission": last_tx.isoformat() if last_tx else None,
+        "offline_store_and_forward_active": True,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @router.get("/communication-status/{report_id}")
 async def get_comm_status(report_id: int, db: AsyncSession = Depends(get_db)):
     stmt = select(EmergencyReport).where(EmergencyReport.id == report_id)

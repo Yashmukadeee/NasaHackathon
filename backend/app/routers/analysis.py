@@ -262,9 +262,37 @@ async def assess_health_data(
 
 
 @router.get("/{astronaut_id}")
-async def get_health_analysis(
+@router.post("/{astronaut_id}")
+async def get_or_run_health_analysis(
     astronaut_id: str,
     day: int = Query(45, ge=1, le=180, description="Mission day to analyze"),
+    include_summary: bool = Query(True, description="Include ground summary text"),
+    payload: Optional[dict[str, Any]] = None,
+):
+    series = load_mission_telemetry(astronaut_id)
+    if not series:
+        raise HTTPException(status_code=404, detail=f"Astronaut {astronaut_id} not found in mission telemetry")
+
+    # If payload provided with custom vitals, inject them
+    if payload and "vitals" in payload and isinstance(payload["vitals"], dict):
+        for k, v in payload["vitals"].items():
+            if k in series and day - 1 < len(series[k]) and v is not None:
+                series[k][day - 1] = v
+
+    ctx = prepare(series)
+    res = analyze(ctx, day)
+
+    if include_summary:
+        res["ground_summary"] = ground_summary(ctx, day)
+    res["astronaut_id"] = astronaut_id
+    res["prototype_disclaimer"] = "Prototype decision-support analysis. Not certified clinical medical diagnostic."
+
+    return res
+
+
+@router.get("/{astronaut_id}/latest")
+async def get_latest_health_analysis(
+    astronaut_id: str,
     include_summary: bool = Query(True, description="Include ground summary text"),
 ):
     series = load_mission_telemetry(astronaut_id)
@@ -272,10 +300,11 @@ async def get_health_analysis(
         raise HTTPException(status_code=404, detail=f"Astronaut {astronaut_id} not found in mission telemetry")
 
     ctx = prepare(series)
-    res = analyze(ctx, day)
+    latest_day = len(series.get("hr", [])) or 45
+    res = analyze(ctx, latest_day)
 
     if include_summary:
-        res["ground_summary"] = ground_summary(ctx, day)
+        res["ground_summary"] = ground_summary(ctx, latest_day)
     res["astronaut_id"] = astronaut_id
     res["prototype_disclaimer"] = "Prototype decision-support analysis. Not certified clinical medical diagnostic."
 

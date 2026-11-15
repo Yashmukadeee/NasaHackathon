@@ -445,27 +445,164 @@ function setupDigitalTwinInteractions() {
   const drawerTitle = $("inspector-organ-title");
   const drawerContent = $("inspector-organ-content");
 
+  const ORGAN_META = {
+    brain: {
+      name: "Cranial & Central Nervous System",
+      icon: "🧠",
+      hazard: "Isolation and Confinement / Space Radiation",
+      keys: ["mood", "stress", "slp", "headache"],
+      risk: "Circadian desynchronization and sleep fragmentation induce psychomotor vigilance decrements, spatial disorientation, and elevated intracranial pressure (ICP).",
+      research: "NASA HRP Risks: Risk of Adverse Cognitive and Behavioral Conditions; CSA Neuromapping.",
+      url: "https://www.nasa.gov/hrp/risks/"
+    },
+    cardiovascular: {
+      name: "Cardiovascular Circulation & Vasculature",
+      icon: "🫀",
+      hazard: "Altered Gravity Fields",
+      keys: ["sbp", "dbp", "hydration"],
+      risk: "Microgravity eliminates hydrostatic arterial pressure gradients, causing baroreflex resetting, hypovolemia (10-15% plasma volume loss), and orthostatic intolerance.",
+      research: "NASA HRP Cardiovascular Regulation in Spaceflight; CSA Vascular Echo Study.",
+      url: "https://www.nasa.gov/hrp/hazards/"
+    },
+    heart: {
+      name: "Cardiac Myocardium & Lead II Rhythm",
+      icon: "❤️",
+      hazard: "Altered Gravity Fields",
+      keys: ["hr", "hrv", "sbp", "dbp"],
+      risk: "Decreased cardiac stroke volume and cardiac muscle mass remodeling occur under prolonged weightlessness without intense daily resistive countermeasure loading.",
+      research: "NASA HRP Ongoing Research: Cardiac Autonomic Conditioning; Lead II Holter Telemetry.",
+      url: "https://www.nasa.gov/hrp/ongoing-hrp-research/"
+    },
+    lungs: {
+      name: "Pulmonary System & Habitat Gas Exchange",
+      icon: "🫁",
+      hazard: "Hostile Closed Environment",
+      keys: ["spo2", "co2"],
+      risk: "Absence of buoyant convective airflow allows localized pockets of hypercapnia (>3.5 mmHg CO2) to accumulate around crew heads, causing headaches and respiratory acidosis.",
+      research: "NASA HRP Risks: Spacecraft Habitat Environmental Tolerances & Hypercapnia Management.",
+      url: "https://www.nasa.gov/hrp/risks/"
+    },
+    abdomen: {
+      name: "Abdominal Viscera & Immune System",
+      icon: "🛡️",
+      hazard: "Hostile Closed Environment / Radiation",
+      keys: ["temp", "fat", "hydration", "nutrition"],
+      risk: "Deep space radiation and microgravity induce T-cell dysregulation, cytokine shifts, altered gut microbiome diversity, and opportunistic viral reactivation.",
+      research: "NASA HRP Risks: Host-Microorganism Interactions; CSA Space Radiation Monitoring & Biodosimetry.",
+      url: "https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp"
+    },
+    spine: {
+      name: "Vertebral Column & Spinal Axis",
+      icon: "🦴",
+      hazard: "Altered Gravity Fields",
+      keys: ["ex", "headache", "fat"],
+      risk: "Absence of axial gravity leads to intervertebral disc unloading and hydration expansion (causing 5-7 cm spinal lengthening), paraspinal muscle flattening, and high back pain incidence.",
+      research: "NASA HRP Musculoskeletal Countermeasures: Spinal Elongation and Post-Flight Herniation Risk.",
+      url: "https://www.nasa.gov/hrp/hazards/"
+    },
+    bones: {
+      name: "Skeletal Bone Mineral Density",
+      icon: "🦴",
+      hazard: "Altered Gravity Fields",
+      keys: ["ex", "grip"],
+      risk: "Weight-bearing cancellous bones (femoral neck, calcaneus, lumbar vertebrae) lose 1.0-1.5% bone mineral density per month through uncoupled osteoclast resorption and hypercalciuria.",
+      research: "NASA HRP Risks: Risk of Early-Onset Osteoporosis and Skeletal Fracture from Spaceflight.",
+      url: "https://www.nasa.gov/hrp/risks/"
+    },
+    muscles: {
+      name: "Postural Anti-Gravity Musculature",
+      icon: "💪",
+      hazard: "Altered Gravity Fields",
+      keys: ["ex", "fat"],
+      risk: "Calf soleus and postural extensor muscles shift from slow Type I to fast Type IIx glycolytic fibers, causing rapid power and endurance atrophy without daily resistive loading.",
+      research: "NASA HRP Countermeasures: Advanced Resistive Exercise Device (ARED) Protocol Analysis.",
+      url: "https://www.nasa.gov/hrp/ongoing-hrp-research/"
+    },
+    arms: {
+      name: "Upper Limbs & Grip Dynamometry",
+      icon: "✊",
+      hazard: "Altered Gravity Fields",
+      keys: ["grip", "fat", "ex"],
+      risk: "High pressurized spacesuit glove resistance during EVAs strains flexor digitorum muscle groups, causing acute grip torque fatigue and fingernail delamination.",
+      research: "NASA EVA Physiology: Upper Extremity Biomechanics and Grip Dynamometry in Spaceflight.",
+      url: "https://www.nasa.gov/hrp/hazards/"
+    },
+    legs: {
+      name: "Lower Limbs & Venous Redistribution",
+      icon: "🦵",
+      hazard: "Altered Gravity Fields",
+      keys: ["ex", "hydration", "sbp"],
+      risk: "2 liters of venous and interstitial fluid shift cephalad from lower limbs, leading to reduced calf volume ('chicken legs') and acute post-landing venous pooling.",
+      research: "NASA HRP: Cephalad Fluid Redistribution & Lower Body Negative Pressure (LBNP) Countermeasures.",
+      url: "https://www.nasa.gov/hrp/hazards/"
+    }
+  };
+
   const openInspector = (domain, organName) => {
     SEL = domain;
     const a = analyze(ctx, T);
-    const dom = a.domains[domain];
+    const dom = a.domains[domain] || { indicators: [], status: 0 };
+    const meta = ORGAN_META[organName] || {
+      name: `${organName.toUpperCase()} SYSTEM`,
+      icon: "🔬",
+      hazard: "Spaceflight Environmental Factors",
+      keys: [],
+      risk: "Physiological adaptation to microgravity and closed spacecraft habitat conditions.",
+      research: "NASA Human Research Program (HRP) Evidence Base.",
+      url: "https://www.nasa.gov/hrp/hazards/"
+    };
 
-    if (drawerTitle) drawerTitle.textContent = `${C.domains[domain].toUpperCase()} SYSTEM INSPECTOR · ${organName.toUpperCase()}`;
+    if (drawerTitle) drawerTitle.innerHTML = `${meta.icon} ${meta.name.toUpperCase()} · MISSION DAY ${T}`;
     if (drawerContent) {
-      const indicatorsList = dom.indicators
-        .map(
-          (i) => `
-        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(66,185,232,0.1)">
-          <span>${i.name}</span>
-          <span><strong>${formatValue(C, i.key, i.value)}</strong> (Base: ${i.baseline.toFixed(C.metrics[i.key].dec)}) · Drift: <span class="${cls(i.level)}">${i.drift >= 0 ? "+" : ""}${i.drift.toFixed(1)} SD</span></span>
-        </div>
-      `
-        )
-        .join("");
+      const idx = Math.max(0, Math.min(T - 1, (mission?.series?.hr?.length ?? 1) - 1));
+
+      // Build indicators list
+      const metricsToShow = meta.keys.length > 0 ? meta.keys : (dom.indicators?.map(i => i.key) || []);
+      const indicatorsList = metricsToShow.map(k => {
+        const cfg = C.metrics[k] || { name: k, unit: "", dec: 1 };
+        const val = mission?.series?.[k] ? mission.series[k][idx] : (ctx.base[k]?.mean ?? 0);
+        const base = ctx.base[k] || { mean: val, sd: 1.0 };
+        const drift = ctx.drift[k] ? ctx.drift[k][idx] : 0;
+        const z = base.sd > 0 ? (val - base.mean) / base.sd : 0;
+        const level = Math.abs(drift) >= C.red ? 2 : Math.abs(drift) >= C.amber ? 1 : 0;
+
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,230,208,0.12)">
+            <div>
+              <strong style="color:var(--text-main);font-size:0.88rem">${cfg.name}</strong>
+              <div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono)">Baseline: ${base.mean.toFixed(cfg.dec)} ± ${base.sd.toFixed(cfg.dec)} ${cfg.unit}</div>
+            </div>
+            <div style="text-align:right">
+              <span style="font-family:var(--font-mono);font-size:0.95rem;font-weight:700;color:#00E6D0">${formatValue(C, k, val)}</span>
+              <div style="font-size:0.75rem" class="${cls(level)}">${drift >= 0 ? "+" : ""}${drift.toFixed(1)} SD drift · Z: ${z.toFixed(1)}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
 
       drawerContent.innerHTML = `
-        <div style="margin-bottom:8px">${indicatorsList}</div>
-        <div class="mu"><strong>Recommended Protocol:</strong> ${C.actions[domain]?.[dom.status === 2 ? 1 : 0]?.[0] || "Maintain flight routine."}</div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="panel-tag cyan" style="margin:0">${meta.hazard}</span>
+            <span class="status-pill ${cls(dom.status || 0)}">${dom.status === 2 ? "▲ ELEVATED CLINICAL RISK" : dom.status === 1 ? "▲ CAUTION WATCH" : "● PHYSIOLOGY NOMINAL"}</span>
+          </div>
+          <div style="background:rgba(8,19,29,0.7);border:1px solid rgba(0,230,208,0.2);border-radius:6px;padding:10px 12px;margin:8px 0">
+            ${indicatorsList}
+          </div>
+        </div>
+
+        <div style="background:rgba(13,29,42,0.65);border-left:3px solid var(--cyan);padding:10px 12px;border-radius:4px;margin-bottom:12px">
+          <strong style="color:var(--text-main);font-size:0.82rem;display:block;margin-bottom:4px">AEROSPACE RISK ANALYSIS & MECHANISM:</strong>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin:0;line-height:1.45">${meta.risk}</p>
+        </div>
+
+        <div style="background:rgba(5,9,13,0.8);border:1px solid rgba(54,185,232,0.25);border-radius:6px;padding:10px 12px">
+          <strong style="color:#00E6D0;font-size:0.78rem;letter-spacing:0.04em;display:block;margin-bottom:4px">TRACEABLE RESEARCH EVIDENCE (NASA / CSA):</strong>
+          <p style="font-size:0.78rem;color:#F1F7FA;margin:0 0 6px 0">${meta.research}</p>
+          <a href="${meta.url}" target="_blank" rel="noopener noreferrer" style="color:var(--cyan);font-size:0.76rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+            ↗ Open Official NASA/CSA Investigation Brief
+          </a>
+        </div>
       `;
     }
     drawer?.classList.add("open");
@@ -476,9 +613,10 @@ function setupDigitalTwinInteractions() {
 
   document.querySelectorAll(".twin-hotspot").forEach((hotspot) => {
     hotspot.addEventListener("mouseenter", (e) => {
-      const dm = hotspot.dataset.domain;
+      const organ = hotspot.dataset.organ || "organ";
+      const meta = ORGAN_META[organ];
       if (tooltip) {
-        tooltip.textContent = `Inspect ${C.domains[dm]} System (${hotspot.dataset.organ.toUpperCase()})`;
+        tooltip.textContent = meta ? `${meta.icon} ${meta.name}` : `Inspect ${hotspot.dataset.organ.toUpperCase()}`;
         tooltip.style.display = "block";
       }
     });
@@ -501,6 +639,7 @@ function setupDigitalTwinInteractions() {
       const target = callout.dataset.target;
       const hotspot = $(`hotspot-${target}`);
       if (hotspot) openInspector(hotspot.dataset.domain, target);
+      else openInspector("car", target);
     });
   });
 }
@@ -509,13 +648,61 @@ function setupDigitalTwinInteractions() {
 function updateDigitalTwinRiskGlow(a) {
   if (!a || !a.domains) return;
 
-  // Domain map to target elements
+  const idx = Math.max(0, Math.min(T - 1, (mission?.series?.hr?.length ?? 1) - 1));
+  const hr = mission?.series?.hr ? mission.series.hr[idx] : 62;
+  const hrv = mission?.series?.hrv ? mission.series.hrv[idx] : 58;
+  const spo2 = mission?.series?.spo2 ? mission.series.spo2[idx] : 98.2;
+  const sbp = mission?.series?.sbp ? mission.series.sbp[idx] : 118;
+  const dbp = mission?.series?.dbp ? mission.series.dbp[idx] : 76;
+  const temp = mission?.series?.temp ? mission.series.temp[idx] : 36.6;
+  const slp = mission?.series?.slp ? mission.series.slp[idx] : 7.5;
+  const fat = mission?.series?.fat ? mission.series.fat[idx] : 3.0;
+  const mood = mission?.series?.mood ? mission.series.mood[idx] : 7.0;
+  const stress = mission?.series?.stress ? mission.series.stress[idx] : 3.0;
+  const headache = mission?.series?.headache ? mission.series.headache[idx] : 1.0;
+  const hydration = mission?.series?.hydration ? mission.series.hydration[idx] : 8;
+  const ex = mission?.series?.ex ? mission.series.ex[idx] : 110;
+  const grip = mission?.series?.grip ? mission.series.grip[idx] : 40.0;
+  const co2 = mission?.series?.co2 ? mission.series.co2[idx] : 2.1;
+
+  // 1. Synchronize Callout Labels with EXACT Selected Authoritative Day Telemetry
+  const calloutBrainVal = $("callout-brain-val");
+  if (calloutBrainVal) calloutBrainVal.textContent = `MOOD ${mood.toFixed(1)}/10 · STRESS ${stress.toFixed(1)}/10`;
+  const calloutBrain = document.querySelector('.twin-callout[data-target="brain"] .callout-sub');
+  if (calloutBrain) calloutBrain.textContent = `Sleep ${slp.toFixed(1)}h · Headache ${headache.toFixed(1)}/10`;
+
+  const calloutHeartVal = $("callout-heart-val");
+  if (calloutHeartVal) calloutHeartVal.textContent = `${Math.round(hr)} BPM · ${Math.round(sbp)}/${Math.round(dbp)}`;
+  const calloutHeart = document.querySelector('.twin-callout[data-target="heart"] .callout-sub');
+  if (calloutHeart) calloutHeart.textContent = `HRV ${Math.round(hrv)}ms · SpO2 ${spo2.toFixed(1)}%`;
+
+  const calloutImmVal = $("callout-imm-val");
+  if (calloutImmVal) calloutImmVal.textContent = `${temp.toFixed(1)} °C · ${a.domains?.imm?.status === 2 ? "ACT / ELEVATED" : a.domains?.imm?.status === 1 ? "WATCH" : "NOMINAL"}`;
+  const calloutImm = document.querySelector('.twin-callout[data-target="abdomen"] .callout-sub');
+  if (calloutImm) calloutImm.textContent = `Fatigue ${fat.toFixed(1)}/10 · Hydration ${Math.round(hydration)}gl`;
+
+  const calloutSansVal = $("callout-sans-val");
+  if (calloutSansVal) calloutSansVal.textContent = `ICP DISCOMFORT: ${headache.toFixed(1)}/10`;
+  const calloutSans = document.querySelector('.twin-callout[data-target="brain"] + .twin-callout .callout-sub');
+  if (calloutSans) calloutSans.textContent = headache >= 4 ? "Cephalad Pressure Elevated" : "Optic Sheath & ICP Baseline";
+
+  const calloutLungsVal = $("callout-lungs-val");
+  if (calloutLungsVal) calloutLungsVal.textContent = `CO2: ${co2.toFixed(1)} mmHg`;
+  const calloutLungs = document.querySelector('.twin-callout[data-target="lungs"] .callout-sub');
+  if (calloutLungs) calloutLungs.textContent = co2 >= 3.5 ? "ECLSS Hypercapnia Watch" : "Nominal Cabin Atmosphere";
+
+  const calloutMskVal = $("callout-msk-val");
+  if (calloutMskVal) calloutMskVal.textContent = `Grip: ${grip.toFixed(1)} kg`;
+  const calloutMsk = document.querySelector('.twin-callout[data-target="legs"] .callout-sub');
+  if (calloutMsk) calloutMsk.textContent = `Daily Exercise: ${Math.round(ex)} min`;
+
+  // 2. Domain map to target elements for Risk Glow
   const domainTargets = {
-    beh: { hotspot: $("hotspot-brain"), callout: document.querySelector('.twin-callout[data-target="brain"]'), valEl: $("callout-brain-val") },
-    car: { hotspot: $("hotspot-heart"), callout: document.querySelector('.twin-callout[data-target="heart"]'), valEl: $("callout-heart-val") },
-    env: { hotspot: $("hotspot-lungs"), callout: document.querySelector('.twin-callout[data-target="lungs"]'), valEl: $("callout-lungs-val") },
-    imm: { hotspot: $("hotspot-abdomen"), callout: document.querySelector('.twin-callout[data-target="abdomen"]'), valEl: $("callout-imm-val") },
-    msk: { hotspot: $("hotspot-legs"), callout: document.querySelector('.twin-callout[data-target="legs"]'), valEl: $("callout-msk-val") },
+    beh: { hotspot: $("hotspot-brain"), callout: document.querySelector('.twin-callout[data-target="brain"]') },
+    car: { hotspot: $("hotspot-heart"), callout: document.querySelector('.twin-callout[data-target="heart"]') },
+    env: { hotspot: $("hotspot-lungs"), callout: document.querySelector('.twin-callout[data-target="lungs"]') },
+    imm: { hotspot: $("hotspot-abdomen"), callout: document.querySelector('.twin-callout[data-target="abdomen"]') },
+    msk: { hotspot: $("hotspot-legs"), callout: document.querySelector('.twin-callout[data-target="legs"]') },
   };
 
   for (const dm in domainTargets) {
@@ -525,7 +712,6 @@ function updateDigitalTwinRiskGlow(a) {
 
     const status = dom.status ?? -1;
 
-    // Reset glow classes
     if (item.hotspot) {
       item.hotspot.classList.remove("glow-ok", "glow-warn", "glow-crit");
       if (status === 0 || status === LEARNING) {
@@ -547,15 +733,23 @@ function updateDigitalTwinRiskGlow(a) {
     }
   }
 
-  // Also sync arm hotspots for musculoskeletal (msk)
-  const armsHotspot = $("hotspot-arms");
-  if (armsHotspot && a.domains.msk) {
-    const mskStatus = a.domains.msk.status ?? -1;
-    armsHotspot.classList.remove("glow-ok", "glow-warn", "glow-crit");
-    if (mskStatus === 0 || mskStatus === LEARNING) armsHotspot.classList.add("glow-ok");
-    else if (mskStatus === 1) armsHotspot.classList.add("glow-warn");
-    else if (mskStatus === 2) armsHotspot.classList.add("glow-crit");
-  }
+  // Also sync extra hotspots
+  const extraHotspots = [
+    { el: $("hotspot-cardiovascular"), dom: a.domains.car },
+    { el: $("hotspot-arms"), dom: a.domains.msk },
+    { el: $("hotspot-spine"), dom: a.domains.msk },
+    { el: $("hotspot-bones"), dom: a.domains.msk },
+    { el: $("hotspot-muscles"), dom: a.domains.msk },
+  ];
+  extraHotspots.forEach(({ el, dom }) => {
+    if (el && dom) {
+      const st = dom.status ?? -1;
+      el.classList.remove("glow-ok", "glow-warn", "glow-crit");
+      if (st === 0 || st === LEARNING) el.classList.add("glow-ok");
+      else if (st === 1) el.classList.add("glow-warn");
+      else if (st === 2) el.classList.add("glow-crit");
+    }
+  });
 }
 
 // ── Directive Commands Generator for Astronaut Actions ─────────────────────────
@@ -1055,7 +1249,10 @@ function setupSyncHandlers() {
         const resp = await fetch("/api/v1/sync/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ records: pending }),
+          body: JSON.stringify({
+            astronaut_id: currentAstronaut ? currentAstronaut.id : "ASTRO-1",
+            records: pending
+          }),
         });
         if (resp.ok) serverAck = true;
       } catch (e) {
@@ -1976,6 +2173,11 @@ async function init() {
       $("gt").textContent = groundSummary(ctx, T);
       $("cm").textContent = "";
       $("dg").showModal();
+    });
+    // Brand Logo Click -> Return to Mission Overview Flight Deck
+    document.querySelector(".brand-item")?.addEventListener("click", () => {
+      document.querySelector('[data-tab="tab-overview"]')?.click();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
     $("crew-ripple-btn")?.addEventListener("click", () => {
       renderCrewModal(T);
