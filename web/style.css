@@ -63,8 +63,31 @@ body.astra-body {
   line-height: 1.5;
   height: 100vh;
   overflow: hidden;
+  /* Allow text selection on data values; only suppress accidental drag-selection on UI chrome */
   user-select: none;
   position: relative;
+}
+
+/* ── Allow text selection on vital readouts so judges can copy values ── */
+.phys-num,
+.phys-unit,
+.phys-status,
+.kpi-val,
+.kpi-sub,
+.callout-val,
+.callout-sub,
+.directive-headline,
+.directive-commands-list li,
+.flank-readout-card,
+.concerns-list,
+.inspector-body,
+.emergency-body,
+.ground-summary-output,
+.action-recommendation-box p,
+.action-recommendation-box li {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 /* ============================================================
@@ -118,6 +141,10 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /* iOS Safari: use dvh (dynamic viewport height) where supported so the
+     layout fills the screen even when the browser chrome is visible.
+     Falls back gracefully to 100vh on older browsers. */
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   transform-origin: center center;
@@ -732,6 +759,92 @@ h1, h2, h3, h4 {
   .unified-body-readout-grid {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+}
+
+/* ── Tablet / Mobile Digital Twin stacking ── */
+@media (max-width: 1024px) {
+  /* On tablet/mobile, centre column (SVG twin) goes full width first,
+     then flanks stack below it in a 2-col grid so readouts + commands
+     sit side-by-side, not buried at the bottom of a long scroll. */
+  .unified-body-readout-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Order: left readouts first, then SVG twin, then command console */
+  .flank-left  { order: 1; }
+  .center-body-column { order: 2; }
+  .flank-right { order: 3; }
+
+  /* On medium tablets, show flanks side by side below the twin */
+  @media (min-width: 600px) {
+    .unified-body-readout-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+    }
+    .center-body-column {
+      grid-column: 1 / -1;
+      order: 1;
+    }
+    .flank-left  { grid-column: 1; order: 2; }
+    .flank-right { grid-column: 2; order: 3; }
+  }
+
+  /* Twin viewport: shorter on mobile, full width */
+  .twin-viewport-container {
+    height: 420px;
+  }
+
+  /* Callouts become repositioned: hide the absolute callouts on small screens
+     to avoid overlapping the compact SVG, and rely on the inspector drawer */
+  .twin-callouts-overlay {
+    display: none;
+  }
+
+  /* Show callout toggle hint instead */
+  .twin-viewport-container::after {
+    content: "Tap an organ for details";
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: rgba(0, 246, 255, 0.55);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* Commands console: relax fixed height on mobile */
+  .full-height-command-console {
+    min-height: 320px;
+  }
+
+  /* Flank vitals grid: 2-col on tablet, 1-col on phone */
+  .flank-vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .flank-vitals-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .twin-viewport-container {
+    height: 340px;
+  }
+  .content-scroll {
+    padding: 14px 12px 48px;
+  }
+  /* Stack flanks vertically on small phones */
+  .unified-body-readout-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .flank-left, .flank-right, .center-body-column {
+    grid-column: 1 !important;
   }
 }
 

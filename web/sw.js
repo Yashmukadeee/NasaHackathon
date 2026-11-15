@@ -1,7 +1,7 @@
 // Offline app-shell cache.
 // The cache name is versioned, so a new deploy replaces the old cache instead of
 // serving stale code (the reason earlier revisions self-unregistered the worker).
-const CACHE_VERSION = "astra-v2";
+const CACHE_VERSION = "astra-v3";
 const CORE_ASSETS = [
   "/",
   "/index.html",

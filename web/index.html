@@ -9,14 +9,14 @@
   <meta name="theme-color" content="#07111C">
   <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="apple-touch-icon" href="logo.jpg">
-  <link rel="stylesheet" href="style.css?v=20261115_v3">
+  <link rel="stylesheet" href="style.css?v=20261115_v4">
 </head>
 
 <body class="astra-body">
 
 <!-- Fullscreen Ambient Live Video Background (Deep Space Exploration) -->
 <div class="ambient-video-bg-container" aria-hidden="true">
-  <video id="ambient-video-bg" class="ambient-video-bg" autoplay muted loop playsinline preload="auto">
+  <video id="ambient-video-bg" class="ambient-video-bg" autoplay muted loop playsinline preload="metadata">
     <source src="background.mp4" type="video/mp4">
   </video>
   <div class="ambient-video-scrim"></div>
@@ -41,17 +41,27 @@
       if (p) p.classList.add("fade-out");
       if (app) app.classList.add("app-zoom-in");
       setTimeout(function() {
-        if (v) v.pause();
+        if (v) { v.pause(); v.src = ""; } // free memory after preloader done
         if (p) p.style.display = "none";
+        // Now lazy-load the ambient background if not already playing
+        if (bg && bg.paused) bg.load();
       }, 1400);
     }
+    // Start preloader immediately; delay ambient bg load until preloader exits
     if (v) v.play().catch(function(){});
-    if (bg) {
-      bg.play().catch(function() {
-        window.addEventListener("click", function() { if (bg) bg.play(); }, { once: true });
-      });
-    }
+    // Ambient video: only start playing after a short delay so preloader video
+    // gets bandwidth priority on first load
+    setTimeout(function() {
+      if (bg) {
+        bg.play().catch(function() {
+          window.addEventListener("click", function() { if (bg) bg.play(); }, { once: true });
+        });
+      }
+    }, 1500);
+    // Auto-dismiss after 3s regardless of video state
     setTimeout(dismiss, 3000);
+    // Dismiss early if preloader video ends before 3s
+    if (v) v.addEventListener("ended", dismiss, { once: true });
   })();
 </script>
 
