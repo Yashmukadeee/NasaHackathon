@@ -40,12 +40,18 @@ class SupabaseService:
     async def check_connection(self) -> dict:
         """Probe Supabase health and accessibility."""
         if not self.enabled:
-            return {"status": "DISABLED", "online": False, "provider": "Local SQLite"}
+            return {
+                "status": "DISABLED",
+                "online": False,
+                "provider": "Local SQLite",
+                "project_id": "cboiwmazdwworsyviimc",
+            }
+        key_to_use = self.key or self.anon_key
         try:
             async with httpx.AsyncClient(timeout=4.0) as http_client:
                 headers = {
-                    "apikey": self.key,
-                    "Authorization": f"Bearer {self.key}",
+                    "apikey": key_to_use,
+                    "Authorization": f"Bearer {key_to_use}",
                 }
                 res = await http_client.get(f"{self.url}/rest/v1/", headers=headers)
                 online = res.status_code == 200
@@ -64,6 +70,7 @@ class SupabaseService:
                 "online": False,
                 "error": str(e),
                 "url": self.url,
+                "project_id": "cboiwmazdwworsyviimc",
             }
 
     async def insert_telemetry_reading(self, reading: dict) -> dict:
