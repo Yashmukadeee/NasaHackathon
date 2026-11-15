@@ -530,7 +530,7 @@
             </div>
           </div>
 
-          <p class="mu">Autonomous daily clinical assessment spanning subjective cognition, cardiovascular vitals, musculoskeletal performance, and habitat environmental readings. Updates trigger real-time CDSS drift re-analysis and generate actionable countermeasure directives.</p>
+          <p class="mu">Autonomous daily clinical log for parameters requiring astronaut manual measurement or subjective evaluation (subjective cognition, blood pressure cuff, grip dynamometry, exercise logs, and symptoms). Continuous biosensors (Heart Rate, HRV, SpO2, Core Temp, CO2, Radiation) are passively streamed by the Wearable Gateway and ECLSS.</p>
 
           <!-- Dynamic Mode Indicator Banner -->
           <div id="checkin-mode-banner" class="checkin-mode-banner mode-edit">
@@ -543,40 +543,6 @@
             </div>
             <div class="mode-banner-right" id="checkin-mode-action-wrap">
               <span class="record-state-badge" id="checkin-record-status">HISTORICAL RECORD</span>
-            </div>
-          </div>
-
-          <!-- Continuous Automated Biosensors & ECLSS Habitat Telemetry Strip (Readonly) -->
-          <div class="checkin-stream-strip">
-            <div class="stream-strip-header">
-              <span class="stream-badge"><span class="pulse-dot"></span> CONTINUOUS BIOSENSORS &amp; ECLSS TELEMETRY (STREAMED AUTOMATICALLY)</span>
-              <span class="stream-sub">Streaming for Day <strong id="ci-stream-day">30</strong> — Not manually entered</span>
-            </div>
-            <div class="stream-pills-row">
-              <div class="stream-pill" title="Continuous optical pulse oximeter / ECG chest strap">
-                <span class="pill-k">❤️ Heart Rate</span>
-                <strong id="ci-stream-hr">62 bpm</strong>
-              </div>
-              <div class="stream-pill" title="Real-time R-R interval heart rate variability">
-                <span class="pill-k">💓 HRV</span>
-                <strong id="ci-stream-hrv">65 ms</strong>
-              </div>
-              <div class="stream-pill" title="Pulse oximeter arterial oxygenation">
-                <span class="pill-k">🫁 SpO2</span>
-                <strong id="ci-stream-spo2">98.2%</strong>
-              </div>
-              <div class="stream-pill" title="Tympanic/skin core body thermoregulation">
-                <span class="pill-k">🌡️ Core Temp</span>
-                <strong id="ci-stream-temp">36.6 °C</strong>
-              </div>
-              <div class="stream-pill" title="ECLSS cabin air partial pressure of carbon dioxide">
-                <span class="pill-k">💨 Cabin CO2</span>
-                <strong id="ci-stream-co2">2.1 mmHg</strong>
-              </div>
-              <div class="stream-pill" title="CSA EVARM / active silicon dosimeter">
-                <span class="pill-k">☢️ Radiation Dose</span>
-                <strong id="ci-stream-dose">0.35 mSv</strong>
-              </div>
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 // Network-first app shell: reloads always get the newest build while online,
 // and the cached shell keeps the app usable when offline.
-const CACHE = "astra-health-v3";
+const CACHE = "astra-health-v4";
 const FILES = ["./", "index.html", "style.css", "app.js", "db.js", "sound.js", "engine.js", "config.js", "data/mission.json", "manifest.webmanifest", "icon.svg", "logo.jpg"];
 const MEDIA = /\.(mp4|webm|mov|ogg|mp3|wav|flac)$/i;
 
