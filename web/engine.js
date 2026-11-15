@@ -12,13 +12,16 @@ const std = (a, m) => Math.sqrt(a.reduce((p, c) => p + (c - m) ** 2, 0) / a.leng
 export function prepare(series, cfg = CONFIG) {
   const base = {}, drift = {};
   for (const k in cfg.metrics) {
+    if (!series[k]) {
+      series[k] = new Array(cfg.days).fill(null);
+    }
     const vals = [];
     for (let d = cfg.baseline.start; d <= cfg.baseline.end; d++) {
       const v = series[k][d - 1];
       if (v != null) vals.push(v);
     }
-    const m = mean(vals);
-    const s = Math.max(std(vals, m), cfg.metrics[k].sd * cfg.sdFloor);
+    const m = vals.length > 0 ? mean(vals) : 0;
+    const s = Math.max(vals.length > 1 ? std(vals, m) : cfg.metrics[k].sd, cfg.metrics[k].sd * cfg.sdFloor);
     base[k] = { mean: m, sd: s };
     let e = 0;
     drift[k] = [];

@@ -1,5 +1,7 @@
 // Evaluation against simulator ground truth: detection latency, sensitivity, false alarms.
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { prepare, analyze } from "../web/engine.js";
 import { CONFIG } from "../web/config.js";
 
@@ -27,7 +29,8 @@ export function latency(series, an) {
   return null;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMain = process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase();
+if (isMain) {
   const runs = 20, anomalies = load("anomalous_1").meta.anomalies;
   let fa = 0;
   for (let s = 1; s <= runs; s++) fa += alertEpisodes(load(`healthy_${s}`).series);

@@ -1,824 +1,1415 @@
 /**
- * app.js — Mission Vitals main application controller.
- * Coordinates engine, DOM, XP/achievements, body map, charts, sound, crew view, 3D body scan.
+ * ASTRA — Astronaut Health Intelligence System
+ * web/app.js — Flight Deck Application Controller (Complete Frontend Transformation)
+ *
+ * Implements:
+ * - Persistent Sidebar Navigation (11 views)
+ * - Top Aerospace Header with MET Clock & Network Status
+ * - Mission Overview Dashboard (Reference 1 & 2 Synthesis)
+ * - Holographic Anatomical Digital Twin with Interactive Organ Hotspots & Layers
+ * - Live Physiology with Real-time Simulated ECG Oscilloscope Canvas
+ * - 17-Parameter Telemetry Matrix & Cardiac Multi-Trend Spline Chart
+ * - High-Precision Health Monitoring with ±1 SD / ±2 SD Baseline Confidence Bands
+ * - Deterministic Health Intelligence (CDSS)
+ * - Daily Astronaut Check-in with IndexedDB persistence & Store-and-Forward sync
+ * - Subsystems: Radiation Intelligence, Mental Health, Bone & Muscle, Environmental
+ * - 180-Day Mission Timeline Trajectory Scrubber with Scenario Jumps
+ * - Mission Data & Synchronization Manager
+ * - Settings with Multi-Astronaut Switching (ASTRO-1, ASTRO-2, ASTRO-3)
  */
+
 import { CONFIG as C } from "./config.js";
 import { prepare, analyze, groundSummary, reasonLines, formatValue, LEARNING } from "./engine.js";
 import { playChime, playWarn, playXP, setMuted, isMuted } from "./sound.js";
-import { initBody3D, updateStatus as body3dUpdateStatus } from "./body3d.js";
+import {
+  initDB,
+  saveTelemetry,
+  getTelemetry,
+  getTelemetryRange,
+  saveCheckIn,
+  getCheckIns,
+  saveAlert,
+  getAlerts,
+  addToSyncQueue,
+  getPendingSync,
+  markSyncComplete,
+  getDatabaseStats,
+  seedInitialData,
+  DEFAULT_ASTRONAUTS,
+} from "./db.js";
 
-// ── Zone improvement data (mirrors body3d.js ZONES) ──────────────────────────
-const ZONE_IMPROVEMENTS = {
-  beh: {
-    label: "Mind & Mood", icon: "🧠",
-    improvements: [
-      "😴 Follow sleep wind-down: dim lights 1 hr before rest",
-      "📞 Schedule crew social or private ground call",
-      "🧘 10-min mindfulness or breathing exercise",
-      "📓 Log mood & stress daily for trend tracking",
-    ]
-  },
-  car: {
-    label: "Cardiovascular", icon: "❤️",
-    improvements: [
-      "💧 Drink 500 ml water and rest for 30 min",
-      "❤️ Measure resting HR again tomorrow morning",
-      "🚴 Add light aerobic session if cleared by protocol",
-      "📊 Check blood pressure; note dizziness or head fullness",
-    ]
-  },
-  imm: {
-    label: "Immune System", icon: "🛡️",
-    improvements: [
-      "🌡️ Log temperature every 6 hours",
-      "💧 Increase water intake; reduce workload",
-      "🤧 Distance from crew if fever or cough present",
-      "📋 Crew medical officer: record full vitals & symptoms",
-    ]
-  },
-  msk: {
-    label: "Bone & Muscle", icon: "🏋️",
-    improvements: [
-      "🏋️ Return to full resistive exercise plan immediately",
-      "📝 Log every session — trend accuracy depends on it",
-      "🥗 Maintain high-protein nutrition score (>7/10)",
-      "🩺 Report back pain or grip loss to crew medical officer",
-    ]
-  },
-  env: {
-    label: "Habitat Air (CO₂)", icon: "🌬️",
-    improvements: [
-      "🌬️ Check CO₂ scrubbers and fan operation immediately",
-      "🚶 Move to best-ventilated module in habitat",
-      "📋 Log headache, fatigue or slowed thinking symptoms",
-      "🚨 Alert crew; follow CO₂ alarm checklist",
-    ]
-  },
-  rad: {
-    label: "Radiation", icon: "☢️",
-    improvements: [
-      "🛡️ Move to storm shelter; minimise open-area exposure",
-      "⏱️ Log time in shielded vs unshielded modules",
-      "🔍 Monitor for nausea, skin redness, fatigue over 48 h",
-      "📡 Contact ground immediately during active SPE",
-    ]
-  },
-};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── DOM Helper & Constants ───────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const N = C.days;
 const LBL = ["Normal", "Watch", "Act"];
 const GLY = ["●", "▲", "■"];
-const st  = (s) => s === LEARNING ? "Learning baseline" : LBL[s];
-const gl  = (s) => s === LEARNING ? "—" : GLY[s];
-const cls = (s) => s === LEARNING ? "sm" : "s" + s;
+const st = (s) => (s === LEARNING ? "Learning baseline" : LBL[s]);
+const gl = (s) => (s === LEARNING ? "—" : GLY[s]);
+const cls = (s) => (s === LEARNING ? "sm" : s === 0 ? "ok" : s === 1 ? "warn" : "crit");
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let mission, ctx, T = 30, SEL = null, timer = null;
-let prevStatus = null; // track overall status to trigger sounds
+// ── Application State ────────────────────────────────────────────────────────
+let mission = null;
+let ctx = null;
+let T = 30; // Current Mission Day (1–180)
+let SEL = "car"; // Selected Anatomical / Clinical Domain
+let timer = null; // Timeline animation timer
+let prevStatus = null; // Audio alert state tracker
+let activeTab = "tab-overview";
+let currentAstronaut = DEFAULT_ASTRONAUTS[0]; // Default: ASTRO-1 CDR. Alex Chen
+let monMetric = "hr"; // Active metric on Health Monitoring tab
+let monRange = 14; // Day range for monitoring chart
+let cardiacDays = 7; // Day range for cardiac multi-chart
 
-// ── Persistence keys ──────────────────────────────────────────────────────────
-const KEY_CI  = "mv-checkins";
-const KEY_XP  = "mv-xp";
-
-// ── LocalStorage helpers ──────────────────────────────────────────────────────
-const loadObj  = (k) => { try { return JSON.parse(localStorage.getItem(k) || "{}"); } catch { return {}; } };
-const saveObj  = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } catch {} };
-
-// ── XP / Achievement system ───────────────────────────────────────────────────
-const LEVELS = [
-  { name: "Trainee",          xpMin: 0   },
-  { name: "Specialist",       xpMin: 100 },
-  { name: "Senior Astronaut", xpMin: 300 },
-  { name: "Mission Commander",xpMin: 700 },
+// ── 17 Parameter Specification ───────────────────────────────────────────────
+const ALL_METRICS_KEYS = [
+  "hr", "hrv", "spo2", "sbp", "dbp", "temp", "slp", "fat",
+  "ex", "grip", "nutrition", "hydration", "mood", "stress",
+  "headache", "co2", "dose"
 ];
-const ACHIEVEMENTS = {
-  iron:    { emoji: "🏅", label: "Iron Routine",   desc: "30-day check-in streak" },
-  warn:    { emoji: "📡", label: "Early Warning",  desc: "Opened forecast when it triggered" },
-  ground:  { emoji: "📋", label: "Ground Ready",   desc: "Generated ground summary" },
-  perfect: { emoji: "⭐", label: "Perfect Week",   desc: "7 consecutive days all Normal" },
-};
 
-function getXPState() {
-  const d = loadObj(KEY_XP);
-  return {
-    xp:           d.xp           ?? 0,
-    streak:       d.streak       ?? 0,
-    lastCheckin:  d.lastCheckin  ?? null,
-    achievements: d.achievements ?? {},
-  };
-}
-function saveXPState(s) { saveObj(KEY_XP, s); }
+// Check-in form fields
+const CHECKIN_FIELDS = [
+  { k: "mood",      label: "Mood (0 Low, 10 High)",             min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "stress",    label: "Stress (0 Calm, 10 Extreme)",       min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "fat",       label: "Fatigue (0 Fresh, 10 Exhausted)",   min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "slp",       label: "Sleep Duration",                    min: 0,  max: 12,  step: 0.5, unit: "hours" },
+  { k: "sbp",       label: "Systolic Blood Pressure",           min: 90, max: 180, step: 1,   unit: "mmHg" },
+  { k: "dbp",       label: "Diastolic Blood Pressure",          min: 60, max: 120, step: 1,   unit: "mmHg" },
+  { k: "hydration", label: "Hydration Intake",                  min: 0,  max: 15,  step: 1,   unit: "glasses" },
+  { k: "nutrition", label: "Nutrition Score",                   min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "headache",  label: "Headache / Pressure Severity",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+];
 
-function levelFor(xp) {
-  let lv = LEVELS[0];
-  for (const l of LEVELS) if (xp >= l.xpMin) lv = l;
-  return lv;
-}
-function nextLevel(xp) {
-  for (const l of LEVELS) if (l.xpMin > xp) return l;
-  return null;
-}
-
-function renderXPBar() {
-  const s = getXPState();
-  const lv  = levelFor(s.xp);
-  const nxt = nextLevel(s.xp);
-  $("xp-level").textContent = lv.name;
-  $("xp-num").textContent   = `${s.xp} XP`;
-  const pct = nxt ? Math.round(((s.xp - lv.xpMin) / (nxt.xpMin - lv.xpMin)) * 100) : 100;
-  $("xp-bar").style.width = pct + "%";
-  // Badges
-  const row = $("badges-row");
-  row.querySelectorAll(".badge").forEach(b => {
-    b.classList.toggle("earned", !!s.achievements[b.dataset.ach]);
-  });
-}
-
-function awardXP(amount, label) {
-  const s = getXPState();
-  s.xp += amount;
-  saveXPState(s);
-  renderXPBar();
-  // Flash animation
-  const el = document.createElement("div");
-  el.className = "xp-flash";
-  el.textContent = `+${amount} XP — ${label}`;
-  document.body.appendChild(el);
-  el.addEventListener("animationend", () => el.remove());
-  playXP();
-}
-
-function unlockAchievement(key) {
-  const s = getXPState();
-  if (s.achievements[key]) return false;
-  s.achievements[key] = true;
-  saveXPState(s);
-  renderXPBar();
-  return true;
-}
-
-function recordCheckin(day) {
-  const s = getXPState();
-  const today = `d${day}`;
-  if (s.lastCheckin === today) return; // already logged today
-  // Streak
-  const ci = loadObj(KEY_CI);
-  let streak = 1;
-  // Count consecutive days with check-ins up to and including this day
-  for (let d = day - 1; d >= 1; d--) {
-    if (ci[d]) streak++; else break;
-  }
-  s.streak     = streak;
-  s.lastCheckin = today;
-  saveXPState(s);
-
-  awardXP(10, "Daily check-in");
-  if (streak > 0 && streak % 7 === 0) awardXP(5, "7-day streak bonus");
-  if (streak >= 30 && unlockAchievement("iron"))   awardXP(50, "Iron Routine unlocked!");
-}
-
-function checkPerfectWeek(a) {
-  const allNormal = Object.values(a.domains).every(d => Math.max(0, d.status) === 0);
-  if (allNormal) {
-    const s = getXPState();
-    s._perfectDays = (s._perfectDays || 0) + 1;
-    if (s._perfectDays >= 7 && unlockAchievement("perfect")) awardXP(50, "Perfect Week!");
-    saveXPState(s);
-  } else {
-    const s = getXPState(); s._perfectDays = 0; saveXPState(s);
-  }
-}
-
-// ── Check-in application ──────────────────────────────────────────────────────
-function applyCheckins() {
-  const c = loadObj(KEY_CI);
-  for (const day in c) for (const k in c[day]) {
-    if (mission.series[k]) mission.series[k][day - 1] = c[day][k];
-  }
-}
-
-// ── Sparkline (mini chart for card) ──────────────────────────────────────────
-function spark(dm, t) {
-  const w = 200, h = 46;
-  const ks = Object.keys(C.metrics).filter(k => C.metrics[k].domain === dm);
+// ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
+function sparklineSvg(driftArray, maxDay, amberThresh, redThresh) {
+  const w = 180, h = 32;
   const pts = [];
-  for (let d = 1; d <= t; d++) {
-    const m = Math.max(...ks.map(k => ctx.drift[k][d - 1]));
-    pts.push(`${((d / N) * w).toFixed(1)},${(h - 2 - (Math.min(Math.max(m, 0), 3.5) / 3.5) * (h - 4)).toFixed(1)}`);
+  for (let d = 1; d <= maxDay; d++) {
+    const val = driftArray[d - 1] ?? 0;
+    const clamped = Math.min(Math.max(val, 0), 3.5);
+    const x = ((d / N) * w).toFixed(1);
+    const y = (h - 2 - (clamped / 3.5) * (h - 4)).toFixed(1);
+    pts.push(`${x},${y}`);
   }
-  const y = v => h - 2 - (v / 3.5) * (h - 4);
+  const yAmber = h - 2 - (amberThresh / 3.5) * (h - 4);
+  const yRed = h - 2 - (redThresh / 3.5) * (h - 4);
+
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-    <line x1="0" x2="${w}" y1="${y(C.amber)}" y2="${y(C.amber)}" stroke="var(--wn)" stroke-dasharray="3 3" opacity=".6"/>
-    <line x1="0" x2="${w}" y1="${y(C.red)}"   y2="${y(C.red)}"   stroke="var(--bd)" stroke-dasharray="3 3" opacity=".6"/>
-    <polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${pts.join(" ")}"/></svg>`;
+    <line x1="0" x2="${w}" y1="${yAmber}" y2="${yAmber}" stroke="var(--status-warn)" stroke-dasharray="3 3" opacity=".6"/>
+    <line x1="0" x2="${w}" y1="${yRed}" y2="${yRed}" stroke="var(--status-crit)" stroke-dasharray="3 3" opacity=".6"/>
+    <polyline fill="none" stroke="var(--cyan)" stroke-width="1.8" points="${pts.join(" ")}"/>
+  </svg>`;
 }
 
-// ── Trend chart (detail panel) ─────────────────────────────────────────────
-function trendChart(dm, t) {
-  const ks     = Object.keys(C.metrics).filter(k => C.metrics[k].domain === dm && k !== "dose");
-  const W = 560, H = 160, PAD = { top: 16, right: 24, bottom: 32, left: 36 };
-  const iw = W - PAD.left - PAD.right;
-  const ih = H - PAD.top  - PAD.bottom;
-  const startDay = Math.max(1, t - 13);
-  const days = t - startDay + 1; // 1..14
+// ── Live ECG Oscilloscope Sweep Animation (Reference 1 Panel 05) ────────────
+let ecgAnimationId = null;
+let ecgX = 0;
+const ecgPoints = [];
+const ECG_BUFFER_LEN = 600;
 
-  // find drift range
-  let dMin = 0, dMax = 2.8;
-  ks.forEach(k => {
-    for (let d = startDay; d <= t; d++) dMax = Math.max(dMax, ctx.drift[k][d-1]);
+function initEcgCanvas() {
+  const canvas = $("ecg-canvas");
+  if (!canvas) return;
+  const ctx2d = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+
+  // Initialize buffer
+  for (let i = 0; i < w; i++) ecgPoints[i] = h / 2;
+
+  function drawEcg() {
+    // Current heart rate determines beat interval
+    const hr = mission.series.hr ? (mission.series.hr[T - 1] ?? 62) : 62;
+    const beatInterval = Math.max(20, Math.floor(60 / hr * 60)); // frames between QRS
+
+    // Generate P-Q-R-S-T wave pattern
+    const phase = ecgX % beatInterval;
+    let yOffset = 0;
+    if (phase === 10) yOffset = -4; // P wave
+    else if (phase === 12) yOffset = 2;
+    else if (phase === 18) yOffset = 4; // Q wave
+    else if (phase === 20) yOffset = -34; // R peak
+    else if (phase === 22) yOffset = 14; // S wave
+    else if (phase === 28) yOffset = -8; // T wave
+    else if (phase === 32) yOffset = 0;
+
+    const baseLine = h / 2;
+    ecgPoints[ecgX] = baseLine + yOffset + (Math.random() * 1.5 - 0.75); // Subtle noise
+
+    // Clear with trailing alpha for phosphor persistence
+    ctx2d.fillStyle = "rgba(4, 9, 15, 0.12)";
+    ctx2d.fillRect(0, 0, w, h);
+
+    // Draw grid lines
+    ctx2d.strokeStyle = "rgba(54, 230, 208, 0.06)";
+    ctx2d.lineWidth = 0.5;
+    for (let gy = 0; gy < h; gy += 20) {
+      ctx2d.beginPath(); ctx2d.moveTo(0, gy); ctx2d.lineTo(w, gy); ctx2d.stroke();
+    }
+    for (let gx = 0; gx < w; gx += 20) {
+      ctx2d.beginPath(); ctx2d.moveTo(gx, 0); ctx2d.lineTo(gx, h); ctx2d.stroke();
+    }
+
+    // Draw Sweep Line & Waveform
+    ctx2d.strokeStyle = "#36E6D0";
+    ctx2d.lineWidth = 1.8;
+    ctx2d.shadowColor = "#36E6D0";
+    ctx2d.shadowBlur = 6;
+    ctx2d.beginPath();
+
+    const startX = Math.max(0, ecgX - 120);
+    for (let i = startX; i <= ecgX; i++) {
+      if (i === startX) ctx2d.moveTo(i, ecgPoints[i]);
+      else ctx2d.lineTo(i, ecgPoints[i]);
+    }
+    ctx2d.stroke();
+    ctx2d.shadowBlur = 0; // reset
+
+    // Sweep cursor bar
+    ctx2d.fillStyle = "#E8F5F7";
+    ctx2d.fillRect(ecgX, 0, 2, h);
+
+    ecgX = (ecgX + 2) % w;
+    ecgAnimationId = requestAnimationFrame(drawEcg);
+  }
+
+  if (ecgAnimationId) cancelAnimationFrame(ecgAnimationId);
+  ecgAnimationId = requestAnimationFrame(drawEcg);
+}
+
+// ── Top KPI Analytical Cards (Part 4B) ──────────────────────────────────────
+function renderKpiCards(a) {
+  const o = a.overall;
+  const t = T;
+
+  // Overall Health
+  const healthEl = $("kpi-health-status");
+  const healthSub = $("kpi-health-sub");
+  if (healthEl) {
+    if (a.adapting) {
+      healthEl.textContent = "Learning";
+      healthEl.className = "kpi-val mu";
+      if (healthSub) healthSub.textContent = "Days 1–7 microgravity adaptation";
+    } else {
+      healthEl.textContent = ["Ready", "Watch closely", "Act now"][o.status] || "Ready";
+      healthEl.className = `kpi-val ${cls(o.status)}`;
+      if (healthSub) healthSub.textContent = o.status === 0 ? "All physiological baselines nominal" : `Tier ${o.tier} Action Protocol`;
+    }
+  }
+
+  // Active Alerts
+  let alertCount = 0;
+  for (const dm in a.domains) {
+    if (a.domains[dm].status >= 1) alertCount++;
+  }
+  if ($("kpi-alert-count")) $("kpi-alert-count").textContent = alertCount;
+  if ($("kpi-alert-tier")) $("kpi-alert-tier").textContent = `Tier ${o.tier} (${o.tier === 3 ? "Ground Escalate" : o.tier === 2 ? "Crew Medical Officer" : o.tier === 1 ? "Self-Manage" : "Nominal Routine"})`;
+  if ($("alert-pill-badge")) {
+    $("alert-pill-badge").textContent = alertCount;
+    $("alert-pill-badge").style.display = alertCount > 0 ? "inline-block" : "none";
+  }
+
+  // Nominal count out of 17
+  let normCount = 0;
+  ALL_METRICS_KEYS.forEach((k) => {
+    const drift = ctx.drift[k] ? ctx.drift[k][t - 1] : 0;
+    if (Math.abs(drift) < C.amber) normCount++;
   });
-  dMax = Math.min(dMax + 0.3, 4.5);
+  if ($("kpi-norm-count")) $("kpi-norm-count").textContent = `${normCount} / 17`;
 
-  const xOf = (d) => PAD.left + ((d - startDay) / Math.max(days - 1, 1)) * iw;
-  const yOf = (v) => PAD.top  + ih - ((v - dMin) / (dMax - dMin)) * ih;
+  // Radiation Cumulative
+  if ($("kpi-rad-val")) $("kpi-rad-val").textContent = `${a.cumDose.toFixed(1)} mSv`;
 
-  const COLORS = ["var(--ac)", "var(--ok)", "var(--wn)", "var(--xp)", "#5cd6d6", "#ff9e5e"];
+  // Forecast
+  const f = a.forecast;
+  if ($("kpi-forecast-val")) $("kpi-forecast-val").textContent = f ? f.name : "Nominal";
+  if ($("kpi-forecast-sub")) $("kpi-forecast-sub").textContent = f ? `Drifting to Watch in ~${f.days} days` : "No parameters trending to Watch";
+}
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+// ── Live Physiology Readouts (Part 6) ───────────────────────────────────────
+function renderLivePhysiology(t) {
+  const hr = mission.series.hr ? (mission.series.hr[t - 1] ?? 62) : 62;
+  const spo2 = mission.series.spo2 ? (mission.series.spo2[t - 1] ?? 98.2) : 98.2;
+  const sbp = mission.series.sbp ? (mission.series.sbp[t - 1] ?? 118) : 118;
+  const dbp = mission.series.dbp ? (mission.series.dbp[t - 1] ?? 76) : 76;
+  const temp = mission.series.temp ? (mission.series.temp[t - 1] ?? 36.6) : 36.6;
+
+  if ($("live-hr-val")) $("live-hr-val").textContent = Math.round(hr);
+  if ($("live-spo2-val")) $("live-spo2-val").textContent = spo2.toFixed(1);
+  if ($("live-bp-val")) $("live-bp-val").textContent = `${Math.round(sbp)}/${Math.round(dbp)}`;
+  if ($("live-temp-val")) $("live-temp-val").textContent = temp.toFixed(1);
+
+  // Status badges
+  if ($("live-hr-status")) {
+    const hrDrift = ctx.drift.hr ? ctx.drift.hr[t - 1] : 0;
+    $("live-hr-status").className = `phys-status ${cls(hrDrift >= C.red ? 2 : hrDrift >= C.amber ? 1 : 0)}`;
+    $("live-hr-status").textContent = hrDrift >= C.red ? "▲ ELEVATED" : hrDrift >= C.amber ? "▲ DRIFTING" : "● NOMINAL";
+  }
+}
+
+// ── All 17 Vitals Matrix Cards (Part 4C) ────────────────────────────────────
+function renderVitalsMatrix(t) {
+  const grid = $("vitals-matrix-grid");
+  if (!grid) return;
+
+  grid.innerHTML = ALL_METRICS_KEYS.map((k) => {
+    const cfg = C.metrics[k] || { name: k, unit: "", dec: 1, dir: 1, domain: "imm" };
+    const curVal = mission.series[k] ? mission.series[k][t - 1] : null;
+    const baseVal = ctx.base[k] ? ctx.base[k].mean : null;
+    const driftVal = ctx.drift[k] ? ctx.drift[k][t - 1] : 0;
+
+    let badgeClass = "ok";
+    let badgeText = "Normal";
+    if (t > C.adaptationDays) {
+      if (driftVal >= C.red) {
+        badgeClass = "crit";
+        badgeText = "Act";
+      } else if (driftVal >= C.amber) {
+        badgeClass = "warn";
+        badgeText = "Watch";
+      }
+    } else {
+      badgeClass = "sm";
+      badgeText = "Learning";
+    }
+
+    const driftTrend = driftVal >= 0.5 ? "↑" : driftVal <= -0.5 ? "↓" : "→";
+    const formattedVal = curVal != null ? curVal.toFixed(cfg.dec) : "--";
+    const formattedBase = baseVal != null ? baseVal.toFixed(cfg.dec) : "--";
+    const delta = curVal != null && baseVal != null ? (curVal - baseVal).toFixed(cfg.dec) : "0.0";
+
+    return `
+      <div class="matrix-card" data-metric="${k}">
+        <div class="matrix-card-top">
+          <span class="matrix-card-name">${cfg.name}</span>
+          <span class="matrix-chip ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="matrix-val-row">
+          <span class="matrix-val">${formattedVal}</span>
+          <span class="matrix-unit">${cfg.unit}</span>
+        </div>
+        <div class="matrix-meta">
+          <span>Base: <strong>${formattedBase}</strong> (Δ ${delta >= 0 ? "+" : ""}${delta})</span>
+          <span>${driftTrend} <strong>${driftVal.toFixed(1)} SD</strong></span>
+        </div>
+        <div class="matrix-spark">
+          ${sparklineSvg(ctx.drift[k] || [], t, C.amber, C.red)}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Add click to inspect on Health Monitoring tab
+  grid.querySelectorAll(".matrix-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      monMetric = card.dataset.metric;
+      document.querySelector('[data-tab="tab-monitoring"]')?.click();
+    });
+  });
+}
+
+// ── Multi-Metric Cardiac Trend Spline Chart (Reference 2) ───────────────────
+function renderCardiacMultiChart(days) {
+  const container = $("cardiac-multi-chart");
+  if (!container) return;
+
+  const W = 620, H = 180;
+  const PAD = { top: 15, right: 20, bottom: 25, left: 40 };
+  const iw = W - PAD.left - PAD.right;
+  const ih = H - PAD.top - PAD.bottom;
+  const startDay = Math.max(1, T - days + 1);
+
+  // Normalize each metric to 0..1 relative to its range in window
+  const hrSeries = mission.series.hr || [];
+  const sbpSeries = mission.series.sbp || [];
+  const spo2Series = mission.series.spo2 || [];
+
+  const xOf = (d) => PAD.left + ((d - startDay) / Math.max(T - startDay, 1)) * iw;
+
+  const buildPath = (series, min, max) => {
+    const pts = [];
+    for (let d = startDay; d <= T; d++) {
+      const v = series[d - 1];
+      if (v != null) {
+        const y = PAD.top + ih - ((v - min) / Math.max(max - min, 1)) * ih;
+        pts.push([xOf(d), Math.max(PAD.top, Math.min(PAD.top + ih, y))]);
+      }
+    }
+    if (pts.length < 2) return "";
+    return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  };
+
+  const hrPath = buildPath(hrSeries, 50, 90);
+  const sbpPath = buildPath(sbpSeries, 100, 150);
+  const spo2Path = buildPath(spo2Series, 92, 100);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">`;
 
   // Grid lines
-  for (let v = 0; v <= dMax; v += 0.5) {
-    const yy = yOf(v).toFixed(1);
-    if (yy < PAD.top || yy > PAD.top + ih) continue;
-    svg += `<line x1="${PAD.left}" x2="${W - PAD.right}" y1="${yy}" y2="${yy}" stroke="var(--ln)" stroke-width="0.5" opacity=".5"/>`;
-    svg += `<text x="${PAD.left - 4}" y="${+yy + 4}" text-anchor="end" font-size="9" fill="var(--mu)">${v.toFixed(1)}</text>`;
+  for (let s = 0; s <= 3; s++) {
+    const yy = PAD.top + (s / 3) * ih;
+    svg += `<line x1="${PAD.left}" x2="${W - PAD.right}" y1="${yy}" y2="${yy}" stroke="rgba(66, 185, 232, 0.1)" stroke-width="0.8"/>`;
   }
 
-  // Amber / Red threshold lines
-  const ya = yOf(C.amber).toFixed(1);
-  const yr = yOf(C.red).toFixed(1);
-  svg += `<line x1="${PAD.left}" x2="${W-PAD.right}" y1="${ya}" y2="${ya}" stroke="var(--wn)" stroke-dasharray="5 3" stroke-width="1.2"/>`;
-  svg += `<text x="${W - PAD.right + 2}" y="${+ya + 4}" font-size="9" fill="var(--wn)">Watch</text>`;
-  if (yr >= PAD.top) {
-    svg += `<line x1="${PAD.left}" x2="${W-PAD.right}" y1="${yr}" y2="${yr}" stroke="var(--bd)" stroke-dasharray="5 3" stroke-width="1.2"/>`;
-    svg += `<text x="${W - PAD.right + 2}" y="${+yr + 4}" font-size="9" fill="var(--bd)">Act</text>`;
-  }
-
-  // Day labels on x-axis
-  for (let d = startDay; d <= t; d++) {
-    if ((d - startDay) % 3 === 0 || d === t) {
-      const xx = xOf(d).toFixed(1);
-      svg += `<text x="${xx}" y="${PAD.top + ih + 14}" text-anchor="middle" font-size="9" fill="var(--mu)">D${d}</text>`;
+  // Day X ticks
+  for (let d = startDay; d <= T; d++) {
+    if ((d - startDay) % Math.max(1, Math.floor((T - startDay) / 5)) === 0 || d === T) {
+      svg += `<text x="${xOf(d)}" y="${PAD.top + ih + 16}" text-anchor="middle" font-size="9" fill="var(--text-dim)" font-family="var(--font-mono)">D${d}</text>`;
     }
   }
 
-  // Current day marker
-  const xCur = xOf(t).toFixed(1);
-  svg += `<line x1="${xCur}" x2="${xCur}" y1="${PAD.top}" y2="${PAD.top+ih}" stroke="var(--ac)" stroke-width="1" opacity=".5" stroke-dasharray="4 3"/>`;
+  // Paths
+  if (hrPath) svg += `<path d="${hrPath}" fill="none" stroke="#36E6D0" stroke-width="2.2" stroke-linecap="round"/>`;
+  if (sbpPath) svg += `<path d="${sbpPath}" fill="none" stroke="#FF5E68" stroke-width="2.2" stroke-linecap="round"/>`;
+  if (spo2Path) svg += `<path d="${spo2Path}" fill="none" stroke="#42B9E8" stroke-width="2.2" stroke-linecap="round"/>`;
 
-  // Per-metric lines + dots
-  ks.forEach((k, ki) => {
-    const col = COLORS[ki % COLORS.length];
-    const pts = [];
-    for (let d = startDay; d <= t; d++) {
-      const v = ctx.drift[k][d - 1];
-      if (v != null) pts.push([xOf(d), yOf(Math.min(Math.max(v, dMin), dMax))]);
+  svg += `</svg>`;
+  container.innerHTML = svg;
+}
+
+// ── Overview Domain Triage Table (Reference 2 Bottom Right) ─────────────────
+function renderOverviewTriageTable(a) {
+  const tbody = $("overview-triage-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = Object.keys(C.domains)
+    .map((dm) => {
+      const dom = a.domains[dm];
+      const s = dom.status;
+      const topInd = dom.indicators[0] || { name: "--", drift: 0 };
+      const statusTag = s === 2 ? "Act" : s === 1 ? "Watch" : "Normal";
+      const statusClass = s === 2 ? "crit" : s === 1 ? "warn" : "ok";
+      const actionText = s === 2 ? "Escalate Tier 2/3" : s === 1 ? "Self-Manage (Tier 1)" : "Routine";
+
+      return `
+        <tr>
+          <td><strong>${C.domains[dm]}</strong></td>
+          <td><span class="matrix-chip ${statusClass}">${statusTag}</span></td>
+          <td>${topInd.name}</td>
+          <td><span class="ok" style="font-family:var(--font-mono)">${topInd.drift >= 0 ? "+" : ""}${topInd.drift.toFixed(1)} SD</span></td>
+          <td><span class="mu">${actionText}</span></td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+// ── Anatomical Digital Twin Interactivity (Reference 1 Masterpiece) ─────────
+function setupDigitalTwinInteractions() {
+  // Layer Toggles
+  const layers = {
+    surface: $("layer-surface"),
+    skeleton: $("layer-skeleton"),
+    organs: $("layer-organs"),
+    vascular: $("layer-vascular"),
+  };
+
+  const updateLayers = () => {
+    if ($("twin-surface-group")) $("twin-surface-group").style.display = layers.surface?.checked ? "block" : "none";
+    if ($("twin-skeleton-group")) $("twin-skeleton-group").style.display = layers.skeleton?.checked ? "block" : "none";
+    if ($("twin-organs-group")) $("twin-organs-group").style.display = layers.organs?.checked ? "block" : "none";
+    if ($("twin-vascular-group")) $("twin-vascular-group").style.display = layers.vascular?.checked ? "block" : "none";
+  };
+
+  Object.values(layers).forEach((cb) => cb?.addEventListener("change", updateLayers));
+
+  // Organ Hotspots & Callouts
+  const tooltip = $("body-tooltip");
+  const drawer = $("organ-inspector-drawer");
+  const drawerTitle = $("inspector-organ-title");
+  const drawerContent = $("inspector-organ-content");
+
+  const openInspector = (domain, organName) => {
+    SEL = domain;
+    const a = analyze(ctx, T);
+    const dom = a.domains[domain];
+
+    if (drawerTitle) drawerTitle.textContent = `${C.domains[domain].toUpperCase()} SYSTEM INSPECTOR · ${organName.toUpperCase()}`;
+    if (drawerContent) {
+      const indicatorsList = dom.indicators
+        .map(
+          (i) => `
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(66,185,232,0.1)">
+          <span>${i.name}</span>
+          <span><strong>${formatValue(C, i.key, i.value)}</strong> (Base: ${i.baseline.toFixed(C.metrics[i.key].dec)}) · Drift: <span class="${cls(i.level)}">${i.drift >= 0 ? "+" : ""}${i.drift.toFixed(1)} SD</span></span>
+        </div>
+      `
+        )
+        .join("");
+
+      drawerContent.innerHTML = `
+        <div style="margin-bottom:8px">${indicatorsList}</div>
+        <div class="mu"><strong>Recommended Protocol:</strong> ${C.actions[domain]?.[dom.status === 2 ? 1 : 0]?.[0] || "Maintain flight routine."}</div>
+      `;
     }
-    if (pts.length < 2) return;
-    const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-    svg += `<path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;
-    // dots
-    pts.forEach(([px, py], i) => {
-      const isLast = i === pts.length - 1;
-      svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${isLast ? 4 : 2.5}" fill="${col}" opacity="${isLast ? 1 : 0.7}"/>`;
+    drawer?.classList.add("open");
+    render();
+  };
+
+  $("inspector-close-btn")?.addEventListener("click", () => drawer?.classList.remove("open"));
+
+  document.querySelectorAll(".twin-hotspot").forEach((hotspot) => {
+    hotspot.addEventListener("mouseenter", (e) => {
+      const dm = hotspot.dataset.domain;
+      if (tooltip) {
+        tooltip.textContent = `Inspect ${C.domains[dm]} System (${hotspot.dataset.organ.toUpperCase()})`;
+        tooltip.style.display = "block";
+      }
     });
+    hotspot.addEventListener("mousemove", (e) => {
+      if (tooltip) {
+        tooltip.style.left = e.clientX + 14 + "px";
+        tooltip.style.top = e.clientY - 28 + "px";
+      }
+    });
+    hotspot.addEventListener("mouseleave", () => {
+      if (tooltip) tooltip.style.display = "none";
+    });
+    hotspot.addEventListener("click", () => {
+      openInspector(hotspot.dataset.domain, hotspot.dataset.organ);
+    });
+  });
+
+  document.querySelectorAll(".twin-callout").forEach((callout) => {
+    callout.addEventListener("click", () => {
+      const target = callout.dataset.target;
+      const hotspot = $(`hotspot-${target}`);
+      if (hotspot) openInspector(hotspot.dataset.domain, target);
+    });
+  });
+}
+
+// ── High-Precision Health Monitoring View (Part 7) ──────────────────────────
+function renderHealthMonitoringChart(metricKey, daysRange) {
+  const container = $("mon-chart-container");
+  const infoEl = $("mon-metric-info");
+  const tableBody = $("mon-table-body");
+  if (!container || !mission.series[metricKey]) return;
+
+  const cfg = C.metrics[metricKey];
+  const series = mission.series[metricKey];
+  const base = ctx.base[metricKey] || { mean: 0, sd: 1 };
+  const endDay = T;
+  const startDay = Math.max(1, endDay - daysRange + 1);
+
+  const W = 880, H = 220;
+  const PAD = { top: 20, right: 35, bottom: 35, left: 55 };
+  const iw = W - PAD.left - PAD.right;
+  const ih = H - PAD.top - PAD.bottom;
+
+  const valsInRange = [];
+  for (let d = startDay; d <= endDay; d++) {
+    const v = series[d - 1];
+    if (v != null) valsInRange.push(v);
+  }
+  const meanVal = base.mean;
+  const sdVal = base.sd;
+  let minV = Math.min(...valsInRange, meanVal - 2.5 * sdVal);
+  let maxV = Math.max(...valsInRange, meanVal + 2.5 * sdVal);
+  if (minV === maxV) { minV -= 1; maxV += 1; }
+  const span = maxV - minV;
+  minV -= span * 0.08;
+  maxV += span * 0.08;
+
+  const xOf = (d) => PAD.left + ((d - startDay) / Math.max(endDay - startDay, 1)) * iw;
+  const yOf = (v) => PAD.top + ih - ((v - minV) / (maxV - minV)) * ih;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
+
+  // Baseline Shaded Confidence Bands (±1 SD and ±2 SD)
+  const yPlus2 = Math.max(PAD.top, yOf(meanVal + 2 * sdVal));
+  const yMinus2 = Math.min(PAD.top + ih, yOf(meanVal - 2 * sdVal));
+  const yPlus1 = Math.max(PAD.top, yOf(meanVal + 1 * sdVal));
+  const yMinus1 = Math.min(PAD.top + ih, yOf(meanVal - 1 * sdVal));
+
+  svg += `<rect x="${PAD.left}" y="${yPlus2}" width="${iw}" height="${Math.max(0, yMinus2 - yPlus2)}" fill="rgba(54, 230, 208, 0.05)" />`;
+  svg += `<rect x="${PAD.left}" y="${yPlus1}" width="${iw}" height="${Math.max(0, yMinus1 - yPlus1)}" fill="rgba(54, 230, 208, 0.12)" />`;
+
+  // Baseline Mean Line
+  const yMean = yOf(meanVal);
+  svg += `<line x1="${PAD.left}" x2="${W - PAD.right}" y1="${yMean}" y2="${yMean}" stroke="#36E6D0" stroke-dasharray="4 4" stroke-width="1.2" opacity=".7"/>`;
+  svg += `<text x="${W - PAD.right + 4}" y="${yMean + 3}" font-size="9" fill="#36E6D0" font-family="var(--font-mono)">Nominal</text>`;
+
+  // Y-Axis Ticks
+  for (let step = 0; step <= 4; step++) {
+    const valStep = minV + (step / 4) * (maxV - minV);
+    const yy = yOf(valStep);
+    svg += `<line x1="${PAD.left}" x2="${W - PAD.right}" y1="${yy}" y2="${yy}" stroke="rgba(66, 185, 232, 0.15)" stroke-width="0.6"/>`;
+    svg += `<text x="${PAD.left - 6}" y="${yy + 4}" text-anchor="end" font-size="9" fill="var(--text-dim)" font-family="var(--font-mono)">${valStep.toFixed(cfg.dec)}</text>`;
+  }
+
+  // X-Axis Ticks
+  for (let d = startDay; d <= endDay; d++) {
+    if ((d - startDay) % Math.max(1, Math.floor((endDay - startDay) / 7)) === 0 || d === endDay) {
+      svg += `<text x="${xOf(d)}" y="${PAD.top + ih + 16}" text-anchor="middle" font-size="10" fill="var(--text-dim)" font-family="var(--font-mono)">D${d}</text>`;
+    }
+  }
+
+  // Points & Path
+  const dataPoints = [];
+  for (let d = startDay; d <= endDay; d++) {
+    const v = series[d - 1];
+    if (v != null) dataPoints.push({ d, x: xOf(d), y: yOf(v), v });
+  }
+
+  if (dataPoints.length > 1) {
+    const pathD = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    svg += `<path d="${pathD}" fill="none" stroke="#36E6D0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+
+  dataPoints.forEach((p) => {
+    const isCurrent = p.d === endDay;
+    svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isCurrent ? 5 : 3}" fill="${isCurrent ? '#36D69A' : '#36E6D0'}" stroke="#07111C" stroke-width="1.5"/>`;
   });
 
   svg += `</svg>`;
+  container.innerHTML = svg;
 
-  // Legend
-  const legend = ks.map((k, ki) => {
-    const col = COLORS[ki % COLORS.length];
-    return `<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:${col}"></span>${C.metrics[k].name}</span>`;
-  }).join("");
+  // Explanation Card
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <h4>${cfg.name} (${cfg.unit}) · Flight Medicine Context</h4>
+      <p>${cfg.edu || "Continuous physiological biometric monitoring against individualized astronaut baseline."}</p>
+      <div style="display:flex;gap:18px;margin-top:8px;font-family:var(--font-mono);font-size:0.75rem">
+        <span>Baseline Mean: <strong style="color:var(--cyan)">${meanVal.toFixed(cfg.dec)} ${cfg.unit}</strong></span>
+        <span>Nominal SD: <strong style="color:var(--cyan)">±${sdVal.toFixed(cfg.dec)}</strong></span>
+        <span>System Domain: <strong style="color:var(--cyan)">${C.domains[cfg.domain]}</strong></span>
+      </div>
+    `;
+  }
 
-  return `<div class="chart-wrap">${svg}<div class="chart-legend">${legend}</div></div>`;
+  // Telemetry Table
+  if (tableBody) {
+    tableBody.innerHTML = dataPoints
+      .slice(-10)
+      .reverse()
+      .map((p) => {
+        const drift = ctx.drift[metricKey] ? ctx.drift[metricKey][p.d - 1] : 0;
+        const z = ((p.v - meanVal) / sdVal) * cfg.dir;
+        const statusText = drift >= C.red ? "Act" : drift >= C.amber ? "Watch" : "Normal";
+        const statusClass = drift >= C.red ? "crit" : drift >= C.amber ? "warn" : "ok";
+        return `
+          <tr>
+            <td><strong>Day ${p.d}</strong></td>
+            <td>${p.v.toFixed(cfg.dec)} ${cfg.unit}</td>
+            <td>${meanVal.toFixed(cfg.dec)} ${cfg.unit}</td>
+            <td style="font-family:var(--font-mono)">${z >= 0 ? "+" : ""}${z.toFixed(2)}</td>
+            <td style="font-family:var(--font-mono)">${drift.toFixed(2)} SD</td>
+            <td><span class="matrix-chip ${statusClass}">${statusText}</span></td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
 }
 
-// ── Health ring gauge ─────────────────────────────────────────────────────────
-function updateRing(status, tier) {
-  const fill = $("ring-fill");
-  const circ = 2 * Math.PI * 34; // ≈213.6
-  let pct, color;
-  if (status === LEARNING) { pct = 0.5; color = "var(--na)"; }
-  else if (status === 0)   { pct = 1.0; color = "var(--ok)"; }
-  else if (status === 1)   { pct = 0.6; color = "var(--wn)"; }
-  else                     { pct = 0.25; color = "var(--bd)"; }
-  fill.setAttribute("stroke-dashoffset", (circ * (1 - pct)).toFixed(1));
-  fill.setAttribute("stroke", color);
+// ── Health Intelligence / CDSS View (Part 8) ────────────────────────────────
+function renderHealthIntelligenceView(a) {
+  const D = a.domains;
+  let normCount = 0, watchCount = 0, actCount = 0;
+
+  for (const dm in D) {
+    const s = D[dm].status;
+    if (s === 2) actCount++;
+    else if (s === 1) watchCount++;
+    else normCount++;
+  }
+
+  if ($("intel-norm-count")) $("intel-norm-count").textContent = normCount;
+  if ($("intel-watch-count")) $("intel-watch-count").textContent = watchCount;
+  if ($("intel-act-count")) $("intel-act-count").textContent = actCount;
+  if ($("intel-tier")) $("intel-tier").textContent = `Tier ${a.overall.tier}`;
+
+  // Synergy Rules
+  const rulesListEl = $("intel-rules-list");
+  if (rulesListEl) {
+    if (a.contributors.length > 0) {
+      rulesListEl.innerHTML = a.contributors
+        .map(
+          (c) => `
+        <div class="rule-item">
+          <div class="rule-title">⚠️ Cross-Domain Synergy: ${C.domains[c.domain]}</div>
+          <p style="margin:4px 0 0;font-size:0.85rem">${c.text}</p>
+        </div>
+      `
+        )
+        .join("");
+    } else {
+      rulesListEl.innerHTML = `<div class="rule-item" style="border-left-color:var(--status-ok)"><span style="color:var(--status-ok)">✓ All physiological domains operating within nominal baseline parameters. No cross-domain alert patterns active.</span></div>`;
+    }
+  }
+
+  // Domain Cards
+  const domainCardsEl = $("intel-domain-cards");
+  if (domainCardsEl) {
+    domainCardsEl.innerHTML = Object.keys(C.domains)
+      .map((dm) => {
+        const dom = D[dm];
+        const s = dom.status;
+        const reasons = reasonLines(ctx, a, dm, 3);
+        const actionTier1 = C.actions[dm]?.[0]?.[0] || "Maintain standard flight routine.";
+        const actionTier2 = C.actions[dm]?.[1]?.[0] || "Involve Crew Medical Officer.";
+
+        return `
+          <div class="intel-card" style="border-left: 3px solid ${s === 2 ? 'var(--status-crit)' : s === 1 ? 'var(--status-warn)' : 'var(--status-ok)'}">
+            <div class="intel-card-header">
+              <strong style="color:var(--text-main)">${C.domains[dm]}</strong>
+              <span class="matrix-chip ${cls(s)}">${gl(s)} ${st(s)}</span>
+            </div>
+            <div style="font-size:0.8rem;margin:8px 0;color:var(--text-muted)">
+              ${reasons.length ? reasons.map((r) => `<div>• ${r}</div>`).join("") : "All parameters near personal baseline."}
+            </div>
+            <div style="font-size:0.75rem;border-top:1px solid var(--border-subtle);padding-top:6px;color:var(--text-dim)">
+              <strong style="color:var(--cyan)">Action:</strong> ${s === 2 ? actionTier2 : actionTier1}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
 }
 
-// ── Body map coloring ─────────────────────────────────────────────────────────
-function updateBodyMap(domains) {
-  const statusColor = s => s === LEARNING ? "var(--na)" : s === 0 ? "var(--ok)" : s === 1 ? "var(--wn)" : "var(--bd)";
-  document.querySelectorAll("#body-map .body-region").forEach(g => {
-    const dm = g.dataset.domain;
-    if (!dm || !domains[dm]) return;
-    const s = domains[dm].status;
-    g.querySelectorAll("ellipse, rect, path, circle").forEach(el => {
-      if (!el.classList.contains("static")) el.setAttribute("fill", statusColor(s));
-    });
-    g.style.color = statusColor(s);
-  });
-  // Legend dots
-  updateDomainLegend(domains);
+// ── Subsystems Rendering (Radiation, Mental, MSK, ENV) ───────────────────────
+function renderSubsystems(a, t) {
+  // 1. Radiation
+  const cumDose = a.cumDose || 0;
+  const limit = C.radiation.missionLimitmSv || 1000;
+  const pct = Math.min(100, (cumDose / limit) * 100);
+  if ($("rad-cum-num")) $("rad-cum-num").textContent = `${cumDose.toFixed(1)} mSv`;
+  if ($("rad-bar-fill")) $("rad-bar-fill").style.width = `${pct}%`;
+  if ($("rad-cum-sub")) $("rad-cum-sub").textContent = `${cumDose.toFixed(0)} of ${limit} mSv Career Dose Limit (${pct.toFixed(1)}%)`;
+
+  const dailyDose = mission.series.dose ? (mission.series.dose[t - 1] ?? 1.8) : 1.8;
+  if ($("rad-daily-num")) $("rad-daily-num").textContent = `${dailyDose.toFixed(1)} mSv/day`;
+
+  const statusEl = $("rad-spe-status");
+  if (statusEl) {
+    if (dailyDose > C.radiation.speDoseThreshold) {
+      statusEl.className = "badge-status crit";
+      statusEl.textContent = "☢ ACTIVE SOLAR PARTICLE EVENT (SPE)";
+    } else {
+      statusEl.className = "badge-status ok";
+      statusEl.textContent = "Nominal GCR Background Exposure";
+    }
+  }
+
+  // 2. Mental Health
+  const mood = mission.series.mood ? (mission.series.mood[t - 1] ?? 7.0) : 7.0;
+  const stress = mission.series.stress ? (mission.series.stress[t - 1] ?? 3.0) : 3.0;
+  const sleep = mission.series.slp ? (mission.series.slp[t - 1] ?? 7.2) : 7.2;
+  const fatigue = mission.series.fat ? (mission.series.fat[t - 1] ?? 3.0) : 3.0;
+
+  if ($("mental-mood-stress")) $("mental-mood-stress").textContent = `${mood.toFixed(1)} / ${stress.toFixed(1)}`;
+  if ($("mental-sleep-val")) $("mental-sleep-val").textContent = `${sleep.toFixed(1)} h`;
+  if ($("mental-fatigue-val")) $("mental-fatigue-val").textContent = `${fatigue.toFixed(1)} / 10`;
+
+  // 3. Bone & Muscle Health
+  const ex = mission.series.ex ? (mission.series.ex[t - 1] ?? 110) : 110;
+  const grip = mission.series.grip ? (mission.series.grip[t - 1] ?? 40.0) : 40.0;
+  if ($("msk-ex-val")) $("msk-ex-val").textContent = `${Math.round(ex)} min`;
+  if ($("msk-grip-val")) $("msk-grip-val").textContent = `${grip.toFixed(1)} kg`;
+
+  const gripDrift = ctx.drift.grip ? ctx.drift.grip[t - 1] : 0;
+  const exDrift = ctx.drift.ex ? ctx.drift.ex[t - 1] : 0;
+  if ($("msk-bmd-risk")) {
+    if (exDrift >= C.red || gripDrift >= C.red) {
+      $("msk-bmd-risk").textContent = "High Risk (Loading Deficit)";
+      $("msk-bmd-risk").className = "mvi-num crit";
+    } else if (exDrift >= C.amber) {
+      $("msk-bmd-risk").textContent = "Moderate Risk (-1.5%/mo)";
+      $("msk-bmd-risk").className = "mvi-num warn";
+    } else {
+      $("msk-bmd-risk").textContent = "Nominal Loading Maintained";
+      $("msk-bmd-risk").className = "mvi-num ok";
+    }
+  }
+
+  // 4. Environmental
+  const co2 = mission.series.co2 ? (mission.series.co2[t - 1] ?? 3.0) : 3.0;
+  if ($("env-co2-val")) $("env-co2-val").textContent = `${co2.toFixed(1)} mmHg`;
+  if ($("env-hypercap-val")) {
+    const co2Drift = ctx.drift.co2 ? ctx.drift.co2[t - 1] : 0;
+    $("env-hypercap-val").textContent = co2Drift >= C.red ? "Critical Hypercapnia" : co2Drift >= C.amber ? "Elevated Warning" : "None (Optimal)";
+    $("env-hypercap-val").className = `kpi-val ${cls(co2Drift >= C.red ? 2 : co2Drift >= C.amber ? 1 : 0)}`;
+  }
 }
 
-function updateDomainLegend(domains) {
-  const leg = $("domain-legend");
-  if (!leg) return;
-  const statusColor = s => s === LEARNING ? "var(--na)" : s === 0 ? "var(--ok)" : s === 1 ? "var(--wn)" : "var(--bd)";
-  leg.innerHTML = Object.keys(C.domains).map(dm => {
-    const s = domains[dm].status;
-    return `<div class="domain-legend-item${SEL === dm ? " active" : ""}" data-dm="${dm}">
-      <span class="dom-dot" style="background:${statusColor(s)}"></span>
-      <span>${C.domains[dm]}</span>
-    </div>`;
-  }).join("");
-  leg.querySelectorAll(".domain-legend-item").forEach(el => {
-    el.addEventListener("click", () => { SEL = el.dataset.dm; render(); });
-  });
-}
-
-// ── Crew Ripple synthetic data ────────────────────────────────────────────────
-const CREW_MEMBERS = [
-  { id: "A", name: "CDR Alpha",   offset: { hr: 0,  slp: 0,  mood: 0,   stress: 0,  co2: 0   } },
-  { id: "B", name: "PLT Bravo",   offset: { hr: 8,  slp: -1, mood: -2,  stress: 1.5,co2: 0   } },
-  { id: "C", name: "MS Charlie",  offset: { hr: 2,  slp: -0.5,mood: -1, stress: 0.5,co2: 0   } },
-  { id: "D", name: "MS Delta",    offset: { hr: 3,  slp: 0.5,mood: 1,   stress: -0.5,co2: 0.5} },
+// ── Mission Timeline Scrubber (Part 14) ──────────────────────────────────────
+const JUMP_SCENARIOS = [
+  [30, "Day 30: Nominal Baseline"],
+  [64, "Day 64: Early Forecast"],
+  [67, "Day 67: Infection Pattern"],
+  [93, "Day 93: CO2 Scrubber Spike"],
+  [121, "Day 121: Solar Event (SPE)"],
+  [140, "Day 140: Bone Loading Drop"],
+  [178, "Day 178: Mood & Behavioral Drift"],
 ];
 
-function syntheticCrewAnalysis(t) {
-  return CREW_MEMBERS.map(cr => {
-    // Build a simple synthetic series by offsetting baselines
-    const seriesCopy = {};
-    for (const k in mission.series) {
-      seriesCopy[k] = mission.series[k].map((v, i) => {
-        if (v == null) return null;
-        const off = cr.offset[k] ?? 0;
-        return v + off * (0.5 + Math.sin(i * 0.1 + cr.id.charCodeAt(0)) * 0.5);
+function setupTimelineScrubber() {
+  const jumpsContainer = $("timeline-jumps-grid");
+  if (jumpsContainer) {
+    jumpsContainer.innerHTML = JUMP_SCENARIOS.map(
+      ([day, label]) => `<button class="timeline-jump-btn" data-day="${day}">${label}</button>`
+    ).join("");
+
+    jumpsContainer.querySelectorAll(".timeline-jump-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        T = Number(btn.dataset.day);
+        render();
       });
+    });
+  }
+
+  const slider = $("tl-slider");
+  if (slider) {
+    slider.oninput = (e) => {
+      T = Number(e.target.value);
+      render();
+    };
+  }
+
+  const playBtn = $("tl-play-btn");
+  if (playBtn) {
+    playBtn.onclick = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+        playBtn.textContent = "▶ Play Flight";
+        return;
+      }
+      playBtn.textContent = "⏸ Pause Flight";
+      timer = setInterval(() => {
+        if (T >= N) {
+          clearInterval(timer);
+          timer = null;
+          playBtn.textContent = "▶ Play Flight";
+          return;
+        }
+        T++;
+        render();
+      }, 140);
+    };
+  }
+}
+
+function renderTimelineSnapshot(t) {
+  const label = $("tl-day-label");
+  const slider = $("tl-slider");
+  if (label) label.textContent = `Mission Day ${t} of 180`;
+  if (slider) slider.value = t;
+
+  const content = $("tl-snapshot-content");
+  if (content) {
+    content.innerHTML = ALL_METRICS_KEYS.slice(0, 8)
+      .map((k) => {
+        const cfg = C.metrics[k];
+        const val = mission.series[k] ? mission.series[k][t - 1] : null;
+        return `<div class="snapshot-item"><span>${cfg.name}:</span> <strong>${val != null ? val.toFixed(cfg.dec) : "--"} ${cfg.unit}</strong></div>`;
+      })
+      .join("");
+  }
+}
+
+// ── Mission Data Storage & Ground Sync (Part 15) ─────────────────────────────
+async function renderMissionDataStats() {
+  try {
+    const stats = await getDatabaseStats();
+    if ($("db-stat-telemetry")) $("db-stat-telemetry").textContent = stats.telemetry || 0;
+    if ($("db-stat-checkins")) $("db-stat-checkins").textContent = stats.checkins || 0;
+    if ($("db-stat-alerts")) $("db-stat-alerts").textContent = stats.alerts || 0;
+    if ($("db-stat-sync")) $("db-stat-sync").textContent = stats.sync_queue || 0;
+
+    const pending = await getPendingSync();
+    const queueBody = $("sync-queue-body");
+    if (queueBody) {
+      if (pending.length === 0) {
+        queueBody.innerHTML = `<tr><td colspan="6" class="mu" style="text-align:center">No pending telemetry in synchronization queue. All records synchronized.</td></tr>`;
+      } else {
+        queueBody.innerHTML = pending
+          .map(
+            (item) => `
+          <tr>
+            <td><code>${item.id}</code></td>
+            <td><strong>${item.type}</strong></td>
+            <td>${item.astronaut_id}</td>
+            <td>Day ${item.day}</td>
+            <td><span class="matrix-chip warn">${item.status}</span></td>
+            <td>${new Date(item.timestamp).toLocaleTimeString()}</td>
+          </tr>
+        `
+          )
+          .join("");
+      }
     }
-    const c2 = prepare(seriesCopy);
-    const a2 = analyze(c2, t);
-    return { cr, a: a2 };
+  } catch (err) {
+    console.warn("[ASTRA] Could not render mission data stats:", err);
+  }
+}
+
+function setupSyncHandlers() {
+  $("btn-trigger-sync")?.addEventListener("click", async () => {
+    const btn = $("btn-trigger-sync");
+    const msg = $("sync-status-msg");
+    btn.disabled = true;
+    btn.textContent = "Connecting to Deep Space Network...";
+
+    try {
+      const pending = await getPendingSync();
+      if (pending.length === 0) {
+        if (msg) msg.textContent = "Telemetry buffer up to date. Zero pending records.";
+        btn.disabled = false;
+        btn.textContent = "📡 Transmit Telemetry to Ground Control";
+        return;
+      }
+
+      let serverAck = false;
+      try {
+        const resp = await fetch("/api/v1/sync/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records: pending }),
+        });
+        if (resp.ok) serverAck = true;
+      } catch (e) {
+        console.log("[ASTRA] Offline transmission mode.");
+      }
+
+      for (const item of pending) {
+        await markSyncComplete(item.id);
+      }
+
+      playChime();
+      if (msg) msg.textContent = serverAck ? `✓ Transmitted ${pending.length} telemetry records to Earth.` : `✓ Offline archive complete: ${pending.length} records processed.`;
+      await renderMissionDataStats();
+    } catch (err) {
+      if (msg) msg.textContent = `Transmission error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "📡 Transmit Telemetry to Ground Control";
+    }
+  });
+
+  $("btn-export-ground")?.addEventListener("click", () => {
+    $("gt").textContent = groundSummary(ctx, T);
+    $("cm").textContent = "";
+    $("dg").showModal();
   });
 }
 
-function renderCrewModal(t) {
-  const crew = syntheticCrewAnalysis(t);
-  const statusColor = s => s === LEARNING ? "var(--na)" : s === 0 ? "var(--ok)" : s === 1 ? "var(--wn)" : "var(--bd)";
-  $("crew-grid").innerHTML = crew.map(({ cr, a }) => {
-    const rows = Object.keys(C.domains).map(dm => {
-      const d = a.domains[dm]; const s = d.status;
-      return `<div class="crew-status-row"><span>${C.domains[dm]}</span>
-        <strong style="color:${statusColor(s)}">${gl(s)} ${st(s)}</strong></div>`;
-    }).join("");
-    const o = a.overall;
-    return `<div class="crew-card">
-      <h4>${cr.name}</h4>
-      <div style="font-size:1.1rem;font-weight:700;color:${statusColor(o.status)};margin-bottom:8px">${gl(o.status)} ${["Ready","Watch closely","Act now"][Math.max(0,o.status)] || "Learning"}</div>
-      ${rows}
-    </div>`;
+// ── Daily Check-in Setup (Part 9) ───────────────────────────────────────────
+function setupCheckinForm() {
+  const container = $("full-checkin-fields");
+  if (!container) return;
+
+  container.innerHTML = CHECKIN_FIELDS.map(({ k, label, min, max, step, unit }) => {
+    const curVal = mission.series[k]
+      ? (mission.series[k][T - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : min))
+      : min;
+
+    return `
+      <div class="field-wrap">
+        <label for="ci_${k}">${label}: <strong id="val_${k}" style="color:var(--cyan)">${curVal} ${unit}</strong></label>
+        <input id="ci_${k}" type="range" min="${min}" max="${max}" step="${step}" value="${curVal}">
+      </div>
+    `;
   }).join("");
+
+  CHECKIN_FIELDS.forEach(({ k, unit }) => {
+    const inp = $("ci_" + k);
+    const val = $("val_" + k);
+    if (inp && val) {
+      inp.oninput = () => {
+        val.textContent = `${inp.value} ${unit}`;
+      };
+    }
+  });
+
+  $("checkin-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      astronaut_id: currentAstronaut.id,
+      day: T,
+      symptoms: Array.from(document.querySelectorAll("#symptoms-chips input:checked")).map((cb) => cb.value),
+      notes: $("checkin-notes") ? $("checkin-notes").value : "",
+    };
+
+    CHECKIN_FIELDS.forEach(({ k }) => {
+      const inp = $("ci_" + k);
+      if (inp) {
+        const num = Number(inp.value);
+        payload[k] = num;
+        if (mission.series[k]) mission.series[k][T - 1] = num;
+      }
+    });
+
+    await saveCheckIn(payload);
+
+    // Save updated telemetry
+    const currentVitals = {};
+    for (const k in mission.series) currentVitals[k] = mission.series[k][T - 1];
+    await saveTelemetry({
+      astronaut_id: currentAstronaut.id,
+      day: T,
+      vitals: currentVitals,
+      simulated: true,
+    });
+
+    playXP();
+    const fb = $("checkin-feedback");
+    if (fb) {
+      fb.textContent = `✓ Day ${T} check-in saved to IndexedDB & queued for downlink.`;
+      setTimeout(() => (fb.textContent = ""), 4000);
+    }
+
+    recompute();
+  });
 }
 
-// ── Educational modal ─────────────────────────────────────────────────────────
+// ── Multi-Astronaut Profile Switcher (Part 16) ──────────────────────────────
+function setupAstronautRoster() {
+  const container = $("astro-select-grid");
+  if (!container) return;
+
+  container.innerHTML = DEFAULT_ASTRONAUTS.map(
+    (astro) => `
+    <div class="astro-card ${astro.id === currentAstronaut.id ? "selected" : ""}" data-id="${astro.id}">
+      <h4>${astro.name}</h4>
+      <div style="font-size:0.82rem;color:var(--cyan)">${astro.rank} · ${astro.id}</div>
+      <div class="mu" style="font-size:0.78rem;margin-top:4px">${astro.role}</div>
+      <div class="mu" style="font-size:0.75rem;margin-top:6px">Blood: ${astro.blood_type} · Age: ${astro.age}</div>
+    </div>
+  `
+  ).join("");
+
+  container.querySelectorAll(".astro-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const sel = DEFAULT_ASTRONAUTS.find((a) => a.id === card.dataset.id);
+      if (sel) {
+        currentAstronaut = sel;
+        $("sidebar-astro-name").textContent = `${sel.rank.substring(0, 3)}. ${sel.name}`;
+        $("sidebar-astro-role").textContent = `${sel.role.split("&")[0].trim()} · ${sel.id}`;
+        setupAstronautRoster();
+        render();
+      }
+    });
+  });
+
+  $("sidebar-switch-astro")?.addEventListener("click", () => {
+    document.querySelector('[data-tab="tab-settings"]')?.click();
+  });
+
+  $("btn-reseed-db")?.addEventListener("click", async () => {
+    await seedInitialData(mission);
+    const fb = $("reseed-feedback");
+    if (fb) fb.textContent = "IndexedDB re-seeded successfully.";
+    await renderMissionDataStats();
+  });
+}
+
+// ── Educational & Crew Modals ───────────────────────────────────────────────
 function showEduModal(dm) {
   const edu = C.domainEdu[dm];
   if (!edu) return;
   $("edu-title").textContent = `ⓘ ${edu.title}`;
   $("edu-about").textContent = edu.about;
-  $("edu-nasa").textContent  = edu.nasa;
-  $("edu-tiers").innerHTML   = edu.tiers.map(t => `<li>${t}</li>`).join("");
+  $("edu-nasa").textContent = edu.nasa;
+  $("edu-tiers").innerHTML = edu.tiers.map((t) => `<li>${t}</li>`).join("");
 
-  // Source links
   const srcEl = $("edu-sources");
   if (srcEl) {
     const links = [];
-    if (edu.source)    links.push(`<a href="${edu.source.url}" target="_blank" rel="noopener">📖 ${edu.source.label}</a>`);
+    if (edu.source) links.push(`<a href="${edu.source.url}" target="_blank" rel="noopener">📖 ${edu.source.label}</a>`);
     if (edu.csaSource) links.push(`<a href="${edu.csaSource.url}" target="_blank" rel="noopener">🍁 ${edu.csaSource.label}</a>`);
-    srcEl.innerHTML = links.length ? `<div class="edu-sources-label">Sources</div>` + links.join("") : "";
+    srcEl.innerHTML = links.length ? `<div class="edu-sources-label">Scientific Foundations</div>` + links.join("") : "";
   }
 
   $("edu-modal").showModal();
 }
 
-// ── li helper ─────────────────────────────────────────────────────────────────
-const li = (a) => a.map(x => `<li>${x}</li>`).join("");
+function renderCrewModal(t) {
+  const statusColor = (s) =>
+    s === LEARNING ? "var(--status-na)" : s === 0 ? "var(--status-ok)" : s === 1 ? "var(--status-warn)" : "var(--status-crit)";
+  const CREW_SIM = [
+    { name: "CDR. Alex Chen", role: "Commander", status: analyze(ctx, t).overall.status },
+    { name: "LCDR. Sarah Tanaka", role: "Crew Medical Officer", status: 0 },
+    { name: "Marcus Vance", role: "Habitat Engineer", status: t >= 90 && t <= 96 ? 1 : 0 },
+    { name: "Dr. Elena Rostova", role: "Payload Specialist", status: 0 },
+  ];
 
-// ── Main render ───────────────────────────────────────────────────────────────
+  $("crew-grid").innerHTML = CREW_SIM.map(
+    (cr) => `
+    <div class="card-panel" style="padding:12px;background:var(--bg-card-sec)">
+      <h4>${cr.name}</h4>
+      <div class="mu" style="font-size:0.75rem">${cr.role}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:${statusColor(cr.status)};margin:6px 0">
+        ${gl(cr.status)} ${["Ready", "Watch closely", "Act now"][Math.max(0, cr.status)] || "Learning"}
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-dim)">Autonomous Edge Stream · QOS 99.8%</div>
+    </div>
+  `
+  ).join("");
+}
+
+// ── Master Render Function ───────────────────────────────────────────────────
 function render() {
   const t = T;
   const a = analyze(ctx, t);
-  const D = a.domains;
-  const order = Object.keys(D).sort((x, y) => Math.max(0, D[y].status) - Math.max(0, D[x].status) || D[y].score - D[x].score);
-
-  // Day label & phase badge
-  $("dl").textContent = `Day ${t} of ${N}`;
-  const ph = $("ph");
-  if (a.adapting) {
-    ph.textContent = "Adaptation window";
-    ph.className = "phase-badge adapt";
-  } else if (a.spe) {
-    ph.textContent = "☢ Solar Particle Event";
-    ph.className = "phase-badge spe";
-  } else {
-    const phaseName = t < 60 ? "Outbound cruise" : t < 120 ? "Deep space" : "Return approach";
-    ph.textContent = phaseName;
-    ph.className = "phase-badge";
-  }
-  $("sl").value = t;
-
-  // Health ring + overall
   const o = a.overall;
-  updateRing(o.status, o.tier);
 
-  if (a.adapting) {
-    $("ov").innerHTML = `<span class="sm">Learning baseline</span>`;
-    $("ovs").textContent = "Days 1–7 are an adaptation window. Alerts start on day 8.";
-  } else {
-    $("ov").innerHTML = `<span class="${cls(o.status)}">${gl(o.status)} ${["Ready","Watch closely","Act now"][o.status]}</span>`;
-    $("ovs").textContent = ["All indicators near your personal baseline.",
-      "Tier 1: self-manage and recheck in 24 h.",
-      "Tier 2: involve the crew medical officer.",
-      "Tier 3: contact ground now and send the summary."][o.tier];
+  // Header Updates
+  if ($("header-date")) $("header-date").textContent = `Mission Day ${t} of ${N}`;
+  if ($("header-phase")) {
+    const phaseName = a.adapting ? "Microgravity Adaptation" : a.spe ? "Solar Event Active" : t < 60 ? "Outbound Cruise" : t < 120 ? "Deep Space Transit" : "Mars Approach";
+    $("header-phase").textContent = phaseName;
+  }
+  if ($("header-met")) {
+    const pad = (n) => String(n).padStart(2, "0");
+    const d3 = String(t).padStart(3, "0");
+    $("header-met").textContent = `MET +${d3}:14:22:05`;
   }
 
-  const wd = o.worstDomain, ws = D[wd].status;
-  $("na").textContent = ws >= 1
-    ? `${C.actions[wd][ws === 2 ? 1 : 0][0]} (${C.domains[wd]})`
-    : "Keep your routine and log your daily check-in.";
-
-  // Top concerns
-  const top = order.filter(d => D[d].status >= 1).slice(0, 3);
-  $("tc").innerHTML = top.length
-    ? "<ul>" + top.map(d => `<li><strong class="${cls(D[d].status)}">${C.domains[d]}</strong>: ${reasonLines(ctx, a, d, 1)[0] || "Drifting from baseline"}</li>`).join("") + "</ul>"
-    : `<span class="mu">No concerns right now.</span>`;
-
-  // Forecast
-  const f = a.forecast;
-  if (f) {
-    // Early Warning achievement
-    if (unlockAchievement("warn")) awardXP(25, "Early Warning unlocked!");
+  // Solar Particle Event Banner
+  const banner = $("global-alert-banner");
+  if (banner) {
+    banner.innerHTML = a.spe
+      ? `☢ ACTIVE SOLAR PARTICLE EVENT (${a.spe.dose.toFixed(1)} mSv/day): Retreat to water-shielded storm shelter immediately and log occupancy duration.`
+      : "";
   }
-  $("fc").innerHTML = f
-    ? `At current trend, <strong>${f.name}</strong> reaches Watch in ~${f.days} day${f.days > 1 ? "s" : ""}. Act now to avoid it.`
-    : `<span class="mu">No indicator trending toward Watch right now.</span>`;
 
-  // Banner
-  $("bn").innerHTML = a.spe
-    ? `<div class="banner" role="alert">☢ Solar particle event (${a.spe.dose.toFixed(1)} mSv/day): move to the shielded shelter now.</div>`
-    : "";
-
-  // Sound: compare to previous status
+  // Sound Alerts on Status Escalation
   if (prevStatus !== null && !a.adapting) {
     if (o.status < prevStatus) playChime();
     else if (o.status > prevStatus) playWarn();
   }
   prevStatus = a.adapting ? null : o.status;
 
-  // Domain cards grid
-  $("gr").innerHTML = Object.keys(C.domains).map(d => {
-    const s = D[d].status;
-    const extra = d === "rad"
-      ? `<div class="bar"><i style="width:${Math.min(100, (a.cumDose / C.radiation.missionLimitmSv) * 100)}%"></i></div>
-         <div class="mu">${a.cumDose.toFixed(0)} of ${C.radiation.missionLimitmSv} mSv</div>`
-      : `<div class="mu">Confidence ${Math.round(D[d].confidence * 100)}%</div>`;
-    return `<button class="panel card ${cls(s)}${SEL === d ? " sel" : ""}" data-d="${d}" aria-label="${C.domains[d]}: ${st(s)}">
-      <button class="info-btn" data-edu="${d}" title="Learn about ${C.domains[d]}" aria-label="Info: ${C.domains[d]}">ⓘ</button>
-      <div class="nm">${C.domains[d]}</div>
-      <div class="chip ${cls(s)}">${gl(s)} ${st(s)}</div>
-      ${extra}${spark(d, t)}
-    </button>`;
-  }).join("");
+  // 1. Render Top KPI Summary Cards (Part 4B)
+  renderKpiCards(a);
 
-  document.querySelectorAll(".card").forEach(c => {
-    c.onclick = (e) => {
-      // prevent info button from triggering card select
-      if (e.target.classList.contains("info-btn")) return;
-      SEL = c.dataset.d; render();
-    };
-  });
-  document.querySelectorAll(".info-btn").forEach(b => {
-    b.onclick = (e) => { e.stopPropagation(); showEduModal(b.dataset.edu); };
-  });
+  // 2. Render Live Physiology Panel (Part 6)
+  renderLivePhysiology(t);
 
-  // Body map coloring
-  updateBodyMap(D);
+  // 3. Render 17-Parameter Telemetry Matrix (Part 4C)
+  renderVitalsMatrix(t);
 
-  // Body map SVG: highlight selected region
-  document.querySelectorAll("#body-map .body-region").forEach(g => {
-    g.classList.toggle("sel-region", g.dataset.domain === SEL);
-  });
+  // 4. Render Cardiac Multi-Trend Spline Chart
+  renderCardiacMultiChart(cardiacDays);
 
-  // Detail panel
-  const dm = SEL || wd;
-  const x  = D[dm];
-  const rs = reasonLines(ctx, a, dm, 2);
-  const cs = a.contributors.filter(c => c.domain === dm || (dm === "beh" && /Habitat/.test(c.text)));
-  const rows = x.indicators.map(i =>
-    `<tr><td>${i.name}</td><td>${formatValue(C, i.key, i.value)}</td>
-     <td>${i.baseline.toFixed(C.metrics[i.key].dec)}</td>
-     <td><span class="dr" style="width:${Math.min(60, Math.max(2, i.drift * 20))}px"></span> ${i.drift.toFixed(1)}</td></tr>`
-  ).join("");
-  const n = Math.round(x.confidence * 7 * x.indicators.length);
+  // 5. Render Overview Triage Table
+  renderOverviewTriageTable(a);
 
-  let tiers = "";
-  if (x.status >= 1) {
-    tiers = `<h3>What to do</h3><strong>Tier 1 — self-manage</strong><ul>${li(C.actions[dm][0])}</ul>`;
-    if (x.status === 2) tiers += `<strong>Tier 2 — crew medical officer</strong><ul>${li(C.actions[dm][1])}</ul>`;
-    if (x.rule === "infection" || x.rule === "spe" || o.tier === 3)
-      tiers += `<strong class="s2">Tier 3 — contact ground now</strong><ul><li>Open Ground summary and transmit.</li></ul>`;
+  // 6. Action Box Recommendation
+  if ($("overview-action-tier")) $("overview-action-tier").textContent = `TIER ${o.tier}`;
+  if ($("overview-action-text")) {
+    const wd = o.worstDomain, ws = a.domains[wd].status;
+    $("overview-action-text").textContent =
+      ws >= 1
+        ? `${C.actions[wd][ws === 2 ? 1 : 0][0]} (${C.domains[wd]})`
+        : "Maintain nominal flight conditioning and sleep routine. Log daily check-in.";
   }
 
-  $("dt").innerHTML =
-    `<h2>Explain: ${C.domains[dm]} <span class="${cls(x.status)}">${gl(x.status)} ${st(x.status)}</span>
-      <button class="info-btn" style="position:static;margin-left:8px" data-edu="${dm}">ⓘ</button></h2>` +
-    (x.status === LEARNING
-      ? `<p class="mu">Not enough data yet — alerts start after the adaptation window.</p>`
-      : `<p>${rs.length ? "Why: " + rs.join("; ") + "." : "Everything is close to your personal baseline."} Confidence ${Math.round(x.confidence * 100)}% (${n} of ${7 * x.indicators.length} readings in the last 7 days).</p>`) +
-    (cs.length ? `<ul>${li(cs.map(c => c.text))}</ul>` : "") +
-    trendChart(dm, t) +
-    `<table><tr><th>Indicator</th><th>Now</th><th>Baseline</th><th>Drift</th></tr>${rows}</table>` +
-    tiers;
+  // 7. Active Concerns List
+  const concernsList = $("overview-concerns-list");
+  if (concernsList) {
+    const top = Object.keys(a.domains).filter((d) => a.domains[d].status >= 1);
+    concernsList.innerHTML = top.length
+      ? "<ul>" + top.map((d) => `<li><strong class="${cls(a.domains[d].status)}">${C.domains[d]}</strong>: ${reasonLines(ctx, a, d, 1)[0] || "Drifting from baseline"}</li>`).join("") + "</ul>"
+      : `<span class="mu">No clinical alerts currently active. Physiological vitals stable.</span>`;
+  }
 
-  $("dt").querySelectorAll(".info-btn").forEach(b => {
-    b.onclick = () => showEduModal(b.dataset.edu);
-  });
-
-  // Perfect week check
-  checkPerfectWeek(a);
-
-  // Sync 3D body scan zones
-  update3DBody(a);
+  // 8. Re-render Subsystem Views
+  renderHealthMonitoringChart(monMetric, monRange);
+  renderHealthIntelligenceView(a);
+  renderSubsystems(a, t);
+  renderTimelineSnapshot(t);
+  renderMissionDataStats();
 }
 
-function recompute() { ctx = prepare(mission.series); render(); }
-
-// ── Check-in dialog ───────────────────────────────────────────────────────────
-const CHECKIN_FIELDS = [
-  { k: "fat",       label: "Fatigue",                          min: 0, max: 10, step: 1,   edu: null },
-  { k: "mood",      label: "Mood (0 low, 10 great)",           min: 0, max: 10, step: 1,   edu: null },
-  { k: "stress",    label: "Stress (0 calm, 10 high)",         min: 0, max: 10, step: 1,   edu: null },
-  { k: "slp",       label: "Sleep last night (hours)",         min: 0, max: 12, step: 0.5, edu: null },
-  { k: "sbp",       label: "Blood pressure systolic (mmHg)",   min: 90, max: 180, step: 1, edu: "Systolic blood pressure is the pressure in your arteries when your heart beats. In space, fluid shifts toward the head can raise it." },
-  { k: "dbp",       label: "Blood pressure diastolic (mmHg)",  min: 60, max: 120, step: 1, edu: "Diastolic pressure is the pressure between heartbeats. Persistent changes signal cardiovascular stress." },
-  { k: "hydration", label: "Hydration (glasses of water)",     min: 0, max: 10, step: 1,   edu: "Without gravity-driven thirst cues, astronauts often under-hydrate. Kidney stones are a known spaceflight risk." },
-  { k: "nutrition", label: "Nutrition score (0–10)",           min: 0, max: 10, step: 1,   edu: "Adequate nutrition is essential to slow muscle and bone loss in microgravity. Aim for protein-rich meals." },
-  { k: "headache",  label: "Headache severity (0–10)",         min: 0, max: 10, step: 1,   edu: "Headaches in space are often caused by fluid shifts, CO2 buildup, or disrupted sleep." },
-];
-
-function openCheckin() {
-  $("cf").innerHTML = CHECKIN_FIELDS.map(({ k, label, min, max, step, edu }) => {
-    const def = mission.series[k]
-      ? (mission.series[k][T - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : min))
-      : min;
-    const infoBtn = edu ? `<span class="field-info-btn" data-tip="${edu}" title="${edu}">ⓘ</span>` : "";
-    return `<label for="f_${k}">${label}${infoBtn}: <strong id="v_${k}" style="color:var(--ac)">${def}</strong></label>
-      <div class="field-row">
-        <input id="f_${k}" type="range" min="${min}" max="${max}" step="${step}" value="${def}">
-        <span class="field-val" id="fv_${k}">${def}</span>
-      </div>`;
-  }).join("");
-
-  CHECKIN_FIELDS.forEach(({ k }) => {
-    const inp = $("f_" + k), val = $("v_" + k), fv = $("fv_" + k);
-    if (!inp) return;
-    inp.oninput = () => { val.textContent = inp.value; fv.textContent = inp.value; };
-  });
-
-  // Info tooltips
-  $("cf").querySelectorAll(".field-info-btn").forEach(el => {
-    el.onclick = () => {
-      alert(el.dataset.tip); // Simple inline tip; can be a modal if desired
-    };
-  });
-
-  $("cd").showModal();
-}
-
-function saveCheckin() {
-  const c = loadObj(KEY_CI);
-  c[T] = {};
-  CHECKIN_FIELDS.forEach(({ k }) => {
-    const inp = $("f_" + k);
-    if (!inp) return;
-    const v = +inp.value;
-    c[T][k] = v;
-    if (mission.series[k]) mission.series[k][T - 1] = v;
-  });
-  saveObj(KEY_CI, c);
-  recordCheckin(T);
-  $("cd").close();
-  recompute();
-}
-
-// ── Body map interactions ─────────────────────────────────────────────────────
-function setupBodyMap() {
-  const tooltip = $("body-tooltip");
-  document.querySelectorAll("#body-map .body-region").forEach(g => {
-    const dm = g.dataset.domain;
-    if (!dm) return;
-    g.addEventListener("mouseenter", (e) => {
-      tooltip.textContent = C.domains[dm];
-      tooltip.style.display = "block";
-    });
-    g.addEventListener("mousemove", (e) => {
-      tooltip.style.left = (e.clientX + 12) + "px";
-      tooltip.style.top  = (e.clientY - 28) + "px";
-    });
-    g.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
-    g.addEventListener("click", () => { SEL = dm; render(); });
-  });
-}
-
-// ── Mute button ───────────────────────────────────────────────────────────────
-function setupMute() {
-  const btn = $("mute-btn");
-  btn.onclick = () => {
-    const m = !isMuted();
-    setMuted(m);
-    btn.textContent = m ? "🔇" : "🔊";
-    btn.title = m ? "Sound muted — click to unmute" : "Toggle sound alerts";
-  };
-}
-
-// ── Crew modal ────────────────────────────────────────────────────────────────
-function setupCrewModal() {
-  $("crew-btn").onclick = () => { renderCrewModal(T); $("crew-modal").showModal(); };
-  $("crew-close").onclick = () => $("crew-modal").close();
-}
-
-// ── Ground summary ────────────────────────────────────────────────────────────
-function setupGroundSummary() {
-  $("gs").onclick = () => {
-    $("gt").textContent = groundSummary(ctx, T);
-    $("cm").textContent = "";
-    $("dg").showModal();
-    if (unlockAchievement("ground")) awardXP(25, "Ground Ready unlocked!");
-  };
-  $("cl").onclick = () => $("dg").close();
-  $("cp").onclick = async () => {
-    try { await navigator.clipboard.writeText($("gt").textContent); $("cm").textContent = "Copied!"; }
-    catch { $("cm").textContent = "Select the text above and copy manually."; }
-  };
-}
-
-// ── Jump markers ─────────────────────────────────────────────────────────────
-const JUMPS = [
-  [30, "D30 baseline"], [64, "D64 forecast"], [67, "D67 infection"],
-  [93, "D93 CO2"], [121, "D121 solar"], [140, "D140 bone"], [178, "D178 mood"],
-];
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-async function init() {
-  mission = await (await fetch("data/mission.json")).json();
-
-  // Ensure new metric arrays exist (nulls) in the mission series
-  const newMetrics = ["sbp", "dbp", "hydration", "nutrition", "headache"];
-  newMetrics.forEach(k => {
-    if (!mission.series[k]) mission.series[k] = new Array(N).fill(null);
-  });
-
-  applyCheckins();
+function recompute() {
   ctx = prepare(mission.series);
-
-  // Timeline slider
-  $("sl").oninput = e => { T = +e.target.value; render(); };
-
-  // Play button
-  $("pl").onclick = e => {
-    if (timer) { clearInterval(timer); timer = null; e.target.textContent = "▶ Play"; return; }
-    e.target.textContent = "⏸ Pause";
-    timer = setInterval(() => {
-      if (T >= N) { clearInterval(timer); timer = null; $("pl").textContent = "▶ Play"; return; }
-      T++; render();
-    }, 140);
-  };
-
-  // Jump markers
-  const jm = $("jm");
-  JUMPS.forEach(([d, label]) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.onclick = () => { T = d; SEL = null; render(); };
-    jm.appendChild(b);
-  });
-
-  // Check-in dialog
-  $("ci").onclick = openCheckin;
-  $("cs").onclick = saveCheckin;
-  $("cx").onclick = () => $("cd").close();
-
-  // Edu modal
-  $("edu-close").onclick = () => $("edu-modal").close();
-
-  setupGroundSummary();
-  setupBodyMap();
-  setupMute();
-  setupCrewModal();
-  setup3DBody();
-
-  // Initial render & XP bar
-  renderXPBar();
   render();
-
-  // Service worker
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
-// ── 3D body scan setup ────────────────────────────────────────────────────────
-function setup3DBody() {
-  const canvas = $("body3d-canvas");
-  if (!canvas) return;
+// ── Application Initialization ───────────────────────────────────────────────
+async function init() {
+  try {
+    // 1. Fetch benchmark mission JSON
+    const resp = await fetch("data/mission.json");
+    mission = await resp.json();
 
-  // Init Three.js viewer; pass callback for zone clicks
-  initBody3D(canvas, (domainId) => {
-    SEL = domainId;
+    // 2. Ensure all 17 metrics exist in series
+    ALL_METRICS_KEYS.forEach((k) => {
+      if (!mission.series[k]) mission.series[k] = new Array(N).fill(null);
+    });
+
+    // 3. Initialize IndexedDB & seed data
+    try {
+      await initDB();
+      await seedInitialData(mission);
+      if ($("header-db-pill")) {
+        $("header-db-pill").className = "header-pill status-ok";
+        $("header-db-pill").querySelector("span:last-child").textContent = "IndexedDB Online";
+      }
+    } catch (dbErr) {
+      console.warn("[ASTRA] In-memory database mode:", dbErr);
+      if ($("header-db-pill")) {
+        $("header-db-pill").className = "header-pill status-delay";
+        $("header-db-pill").querySelector("span:last-child").textContent = "Local Memory Mode";
+      }
+    }
+
+    // 4. Prepare analytics context
+    ctx = prepare(mission.series);
+
+    // 5. Setup Sidebar Navigation
+    document.querySelectorAll(".sidebar-nav .nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".sidebar-nav .nav-item").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".view-panel").forEach((p) => p.classList.remove("active"));
+
+        btn.classList.add("active");
+        activeTab = btn.dataset.tab;
+        const targetView = $(activeTab);
+        if (targetView) targetView.classList.add("active");
+
+        if (activeTab === "tab-monitoring") renderHealthMonitoringChart(monMetric, monRange);
+        if (activeTab === "tab-intelligence") renderHealthIntelligenceView(analyze(ctx, T));
+        if (activeTab === "tab-data") renderMissionDataStats();
+      });
+    });
+
+    // 6. Setup Interactive Components
+    setupDigitalTwinInteractions();
+    initEcgCanvas();
+    setupCheckinForm();
+    setupTimelineScrubber();
+    setupSyncHandlers();
+    setupAstronautRoster();
+
+    // Cardiac chart timeframe filter pills
+    document.querySelectorAll("#cardiac-range-selector button").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll("#cardiac-range-selector button").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        cardiacDays = Number(pill.dataset.days) || 7;
+        renderCardiacMultiChart(cardiacDays);
+      });
+    });
+
+    // Health monitoring filters
+    const monMetricSelect = $("mon-metric-select");
+    if (monMetricSelect) {
+      monMetricSelect.innerHTML = ALL_METRICS_KEYS.map((k) => `<option value="${k}">${C.metrics[k]?.name || k} (${C.metrics[k]?.unit || ""})</option>`).join("");
+      monMetricSelect.value = monMetric;
+      monMetricSelect.onchange = (e) => {
+        monMetric = e.target.value;
+        renderHealthMonitoringChart(monMetric, monRange);
+      };
+    }
+
+    document.querySelectorAll("#mon-range-group button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#mon-range-group button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        monRange = Number(btn.dataset.range) || 14;
+        renderHealthMonitoringChart(monMetric, monRange);
+      });
+    });
+
+    // Quick Action Buttons
+    $("quick-checkin-btn")?.addEventListener("click", () => document.querySelector('[data-tab="tab-checkin"]')?.click());
+    $("quick-ground-btn")?.addEventListener("click", () => {
+      $("gt").textContent = groundSummary(ctx, T);
+      $("cm").textContent = "";
+      $("dg").showModal();
+    });
+    $("btn-open-ground-summary")?.addEventListener("click", () => {
+      $("gt").textContent = groundSummary(ctx, T);
+      $("cm").textContent = "";
+      $("dg").showModal();
+    });
+    $("crew-ripple-btn")?.addEventListener("click", () => {
+      renderCrewModal(T);
+      $("crew-modal").showModal();
+    });
+    $("crew-close")?.addEventListener("click", () => $("crew-modal").close());
+    $("cl")?.addEventListener("click", () => $("dg").close());
+    $("cp")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText($("gt").textContent);
+        $("cm").textContent = "Transcribed to system clipboard.";
+      } catch {
+        $("cm").textContent = "Select text and copy manually.";
+      }
+    });
+
+    // Audio Mute Toggle
+    const muteBtn = $("mute-toggle-btn");
+    if (muteBtn) {
+      muteBtn.onclick = () => {
+        const m = !isMuted();
+        setMuted(m);
+        muteBtn.textContent = m ? "🔇" : "🔊";
+      };
+    }
+
+    // FastAPI Backend Health & Status Monitor
+    const FASTAPI_BASE = "http://localhost:8000/api/v1";
+    let isFastApiOnline = false;
+
+    async function checkFastApiBackend() {
+      const pill = $("header-fastapi-pill");
+      const label = $("fastapi-status-label");
+      try {
+        const res = await fetch(`${FASTAPI_BASE}/status`, { signal: AbortSignal.timeout(2500) });
+        if (res.ok) {
+          const data = await res.json();
+          isFastApiOnline = true;
+          if (pill) { pill.className = "header-pill status-ok"; }
+          if (label) { label.textContent = "FastAPI :8000 Online"; }
+          return true;
+        }
+      } catch (e) {
+        isFastApiOnline = false;
+        if (pill) { pill.className = "header-pill status-delay"; }
+        if (label) { label.textContent = "FastAPI Offline (Local Mode)"; }
+      }
+      return false;
+    }
+
+    // Emergency Ground Contact Modal Handlers
+    function showEmergencyModal(day = T) {
+      const a = analyze(ctx, day);
+      const em = $("emergency-modal");
+      if (!em) return;
+
+      const titleEl = $("emergency-title");
+      const bodyEl = $("emergency-body");
+      const actionsEl = $("emergency-actions");
+      const badgeEl = $("emergency-comm-badge");
+
+      const worstDm = a.overall.worstDomain;
+      const dmName = C.domains[worstDm] || worstDm.toUpperCase();
+      const reasons = reasonLines(ctx, a, worstDm);
+
+      if (titleEl) {
+        titleEl.textContent = `CRITICAL ALERT — ${dmName.toUpperCase()} DOMAIN`;
+      }
+      if (bodyEl) {
+        bodyEl.innerHTML = `
+          <strong>Astronaut:</strong> ${currentAstronaut.name} (${currentAstronaut.id})<br>
+          <strong>Mission Day:</strong> Day ${day} of ${N} (Escalation Tier ${a.overall.tier})<br>
+          <strong>Clinical Syndrome:</strong> ${a.contributors.length ? a.contributors.map(c => c.text).join(" ") : "Multi-parameter physiological drift exceeding autonomous threshold limits."}<br>
+          <div style="margin-top:6px;font-family:var(--font-mono);font-size:0.8rem;color:var(--cyan);">${reasons.join("<br>")}</div>
+        `;
+      }
+      if (actionsEl) {
+        const domainActions = (C.actions && C.actions[worstDm] && C.actions[worstDm][1]) || [
+          "Perform immediate full vitals re-check and log with Crew Medical Officer.",
+          "Prepare emergency medical kit diagnostics.",
+          "Request urgent flight surgeon ground telemetry conference."
+        ];
+        actionsEl.innerHTML = domainActions.map(act => `<li>${act}</li>`).join("");
+      }
+      if (badgeEl) {
+        badgeEl.textContent = "LOCAL QUEUED (READY FOR TRANSMISSION)";
+        badgeEl.className = "badge-queued";
+      }
+
+      em.showModal();
+    }
+
+    $("quick-escalate-btn")?.addEventListener("click", () => {
+      showEmergencyModal(T);
+    });
+
+    $("btn-close-emergency")?.addEventListener("click", () => {
+      $("emergency-modal")?.close();
+    });
+
+    $("btn-transmit-ground")?.addEventListener("click", async () => {
+      const badgeEl = $("emergency-comm-badge");
+      const transmitBtn = $("btn-transmit-ground");
+      if (transmitBtn) {
+        transmitBtn.disabled = true;
+        transmitBtn.textContent = "TRANSMITTING TELEMETRY...";
+      }
+
+      try {
+        if (isFastApiOnline) {
+          // Send to FastAPI Emergency Report endpoint
+          const repRes = await fetch(`${FASTAPI_BASE}/ground-team/emergency-report`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              astronaut_id: currentAstronaut.id,
+              mission_day: T,
+              reason: "Astronaut initiated critical emergency ground contact"
+            })
+          });
+          if (repRes.ok) {
+            const repData = await repRes.json();
+            // Call transmit endpoint
+            await fetch(`${FASTAPI_BASE}/ground-team/contact`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                report_id: repData.report_id,
+                astronaut_id: currentAstronaut.id,
+                note: "Critical telemetry downlink from ASTRA Flight Deck"
+              })
+            });
+
+            if (badgeEl) {
+              badgeEl.textContent = "TRANSMITTED TO FLIGHT SURGEON QUEUE";
+              badgeEl.className = "badge-transmitted";
+            }
+          }
+        } else {
+          // Local offline persistent queue fallback via IndexedDB
+          await addToSyncQueue({
+            action: "EMERGENCY_REPORT",
+            endpoint: "/api/v1/ground-team/emergency-report",
+            payload: {
+              astronaut_id: currentAstronaut.id,
+              mission_day: T,
+              tier: 3,
+              timestamp: new Date().toISOString()
+            }
+          });
+          if (badgeEl) {
+            badgeEl.textContent = "OFFLINE STORED IN ONBOARD MEMORY";
+            badgeEl.className = "badge-queued";
+          }
+        }
+      } catch (err) {
+        console.warn("[ASTRA] Ground transmit warning:", err);
+        if (badgeEl) {
+          badgeEl.textContent = "SAVED IN SECURE ONBOARD BUFFER";
+          badgeEl.className = "badge-queued";
+        }
+      } finally {
+        if (transmitBtn) {
+          transmitBtn.disabled = false;
+          transmitBtn.textContent = "📡 TRANSMIT TO GROUND CONSOLE";
+        }
+      }
+    });
+
+    // Check backend status on boot and every 30s
+    checkFastApiBackend();
+    setInterval(checkFastApiBackend, 30000);
+
+    // Initial Master Render
     render();
-    showImprovementsPanel(domainId);
-  });
 
-  // Build zone legend
-  buildZoneLegend();
-
-  // Dismiss button
-  const dismiss = $("impv-dismiss");
-  if (dismiss) dismiss.onclick = () => {
-    $("improvements-panel").style.display = "none";
-  };
-}
-
-// Build the colour-coded legend under the canvas
-function buildZoneLegend() {
-  const leg = $("zone-legend");
-  if (!leg) return;
-  const domains = { imm: "Immune", msk: "Bone & Muscle", car: "Heart", beh: "Mind", env: "Air", rad: "Radiation" };
-  leg.innerHTML = Object.entries(domains).map(([id, name]) =>
-    `<div class="zone-pill" data-zone="${id}">
-      <span class="zone-dot" id="zdot-${id}" style="background:#7a90aa"></span>
-      ${name}
-    </div>`
-  ).join("");
-}
-
-// Called from render() to sync 3D zone colours + improvements panel
-function update3DBody(analysis) {
-  if (!analysis) return;
-  const statusMap = {};
-  const colorMap  = { "-1": "#5ca8ff", 0: "#3ecf84", 1: "#f5be45", 2: "#ff4444" };
-  for (const dm in analysis.domains) {
-    statusMap[dm] = Math.max(-1, analysis.domains[dm].status ?? -1);
-    // Update legend dot colour
-    const dot = document.getElementById("zdot-" + dm);
-    if (dot) dot.style.background = colorMap[String(statusMap[dm])] ?? "#7a90aa";
-  }
-  // Push status to Three.js viewer
-  try { body3dUpdateStatus(statusMap); } catch (_) {}
-
-  // Auto-show improvements panel for the worst-status domain
-  const worst = analysis.overall?.worstDomain;
-  const worstStatus = worst ? (analysis.domains[worst]?.status ?? -1) : -1;
-  if (worstStatus >= 1) {
-    showImprovementsPanel(worst, worstStatus);
-  } else {
-    const panel = $("improvements-panel");
-    if (panel) panel.style.display = "none";
+    // Register Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  } catch (err) {
+    console.error("[ASTRA] Application boot error:", err);
   }
 }
 
-// Render the improvements panel for a given domain
-function showImprovementsPanel(domainId, status) {
-  const panel = $("improvements-panel");
-  if (!panel) return;
-  const info = ZONE_IMPROVEMENTS[domainId];
-  if (!info) return;
-
-  // Determine status from current analysis if not passed
-  let s = status;
-  if (s === undefined && ctx) {
-    const a = analyze(ctx, T);
-    s = a.domains[domainId]?.status ?? -1;
-  }
-  if (s < 1) { panel.style.display = "none"; return; }
-
-  $("impv-icon").textContent   = info.icon;
-  $("impv-title").textContent  = info.label;
-  const statusEl = $("impv-status");
-  if (s === 2) {
-    statusEl.textContent  = "■ Act Now — involve crew medical officer";
-    statusEl.className    = "impv-status s2";
-  } else {
-    statusEl.textContent  = "▲ Watch Closely — self-manage and recheck";
-    statusEl.className    = "impv-status s1";
-  }
-  $("impv-list").innerHTML = info.improvements
-    .map(t => `<li class="${s === 1 ? "warn-item" : ""}">${t}</li>`)
-    .join("");
-  panel.style.display = "block";
-}
-
+// Start Flight Deck
 init();

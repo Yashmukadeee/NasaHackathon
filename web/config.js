@@ -24,6 +24,8 @@ export const CONFIG = {
     fat:       { name: "Fatigue",               unit: "/10",     domain: "imm", dir: 1,  sd: 0.6,  dec: 1 },
     hr:        { name: "Resting heart rate",    unit: "bpm",     domain: "car", dir: 1,  sd: 2,    dec: 0 },
     hrv:       { name: "HRV",                   unit: "ms",      domain: "car", dir: -1, sd: 5,    dec: 0 },
+    spo2:      { name: "Blood oxygen (SpO2)",   unit: "%",       domain: "car", dir: -1, sd: 0.8,  dec: 1,
+                 edu: "Blood oxygen saturation indicates oxygen delivery to brain and tissues. Hypoxia in microgravity or habitat pressure drops causes rapid cognitive decrements." },
     sbp:       { name: "Blood pressure (sys)",  unit: "mmHg",    domain: "car", dir: 1,  sd: 8,    dec: 0,
                  edu: "Systolic blood pressure measures the force of blood on artery walls during heartbeat. In microgravity, fluid shifts towards the head can alter blood pressure patterns, increasing cardiovascular risk over long missions." },
     dbp:       { name: "Blood pressure (dia)",  unit: "mmHg",    domain: "car", dir: 1,  sd: 5,    dec: 0,

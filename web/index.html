@@ -3,250 +3,1053 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mission Vitals</title>
+<title>ASTRA — Astronaut Health Intelligence System</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#07111C">
 <link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="style.css">
-
-<!-- Three.js r158 via importmap (no npm needed) -->
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
-  }
-}
-</script>
 </head>
-<body>
-<main>
+<body class="astra-body">
 
-  <!-- ── Header ── -->
-  <div class="top">
-    <div class="top-left">
-      <h1>🚀 Mission Vitals</h1>
-      <div class="subtitle">Offline astronaut health self-monitoring · Decision support, not diagnosis.</div>
-    </div>
-    <div class="top-right">
-      <!-- XP / Level -->
-      <div class="xp-wrap">
-        <span class="xp-label" id="xp-level">Trainee</span>
-        <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
-        <span class="xp-num" id="xp-num">0 XP</span>
-      </div>
-      <!-- Achievement badges -->
-      <div class="badges" id="badges-row">
-        <span class="badge" data-ach="iron"     title="Iron Routine — 30-day check-in streak">🏅</span>
-        <span class="badge" data-ach="warn"     title="Early Warning — opened forecast alert">📡</span>
-        <span class="badge" data-ach="ground"   title="Ground Ready — generated ground summary">📋</span>
-        <span class="badge" data-ach="perfect"  title="Perfect Week — 7 days all Normal">⭐</span>
-      </div>
-      <!-- Action buttons -->
-      <button id="ci" class="btn-primary">📋 Check-in</button>
-      <button id="gs">📡 Ground summary</button>
-      <button id="crew-btn" title="Crew Ripple comparison">👥 Crew</button>
-      <button id="mute-btn" class="icon-btn" title="Toggle sound alerts">🔊</button>
-    </div>
-  </div>
+<div class="app-shell">
 
-  <!-- ── Timeline controls ── -->
-  <section class="ctl" aria-label="Mission timeline">
-    <div class="row" style="margin-bottom:8px">
-      <strong class="day-label" id="dl">Day 1</strong>
-      <span class="phase-badge" id="ph">Cruise</span>
-      <div style="flex:1"></div>
-      <button id="pl">▶ Play</button>
-    </div>
-    <div class="row">
-      <input id="sl" type="range" min="1" max="180" value="30" aria-label="Mission day">
-    </div>
-    <div class="row" id="jm" style="margin-top:8px"></div>
-  </section>
-
-  <!-- ── Banner (solar event etc.) ── -->
-  <div id="bn"></div>
-
-  <!-- ── Summary row ── -->
-  <section class="sum" aria-label="Mission health summary">
-    <div class="panel">
-      <h2>Mission health</h2>
-      <div class="health-ring-wrap">
-        <!-- SVG ring gauge rendered by JS in #ring-svg -->
-        <svg id="ring-svg" width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
-          <circle class="ring-track" cx="40" cy="40" r="34"/>
-          <circle class="ring-fill" id="ring-fill" cx="40" cy="40" r="34"
-            stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="var(--ok)"/>
+  <!-- ============================================================
+       LEFT SIDEBAR NAVIGATION (Reference Image 2 Inspired)
+       ============================================================ -->
+  <aside class="app-sidebar" id="app-sidebar" aria-label="Flight Navigation">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#36E6D0" stroke-width="2"/>
+          <path d="M12 4L14.5 9.5L20 12L14.5 14.5L12 20L9.5 14.5L4 12L9.5 9.5L12 4Z" fill="#36E6D0"/>
         </svg>
-        <div>
-          <div class="big" id="ov"></div>
-          <div class="mu" id="ovs"></div>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">ASTRA</span>
+        <span class="brand-sub">HEALTH INTELLIGENCE</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">OVERVIEW</div>
+      <button class="nav-item active" data-tab="tab-overview">
+        <span class="nav-icon">⬚</span>
+        <span class="nav-label">Mission Overview</span>
+      </button>
+      <button class="nav-item" data-tab="tab-monitoring">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Health Monitoring</span>
+      </button>
+      <button class="nav-item" data-tab="tab-intelligence">
+        <span class="nav-icon">🧠</span>
+        <span class="nav-label">Health Intelligence</span>
+        <span class="nav-badge" id="alert-pill-badge">0</span>
+      </button>
+      <button class="nav-item" data-tab="tab-checkin">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Daily Check-in</span>
+      </button>
+
+      <div class="nav-section-label">ANALYTICS & SUBSYSTEMS</div>
+      <button class="nav-item" data-tab="tab-radiation">
+        <span class="nav-icon">☢</span>
+        <span class="nav-label">Radiation Intelligence</span>
+      </button>
+      <button class="nav-item" data-tab="tab-mental">
+        <span class="nav-icon">🧘</span>
+        <span class="nav-label">Mental Health</span>
+      </button>
+      <button class="nav-item" data-tab="tab-msk">
+        <span class="nav-icon">🦾</span>
+        <span class="nav-label">Bone & Muscle</span>
+      </button>
+      <button class="nav-item" data-tab="tab-env">
+        <span class="nav-icon">🌿</span>
+        <span class="nav-label">Environmental</span>
+      </button>
+
+      <div class="nav-section-label">OPERATIONS & DATA</div>
+      <button class="nav-item" data-tab="tab-timeline">
+        <span class="nav-icon">⏱</span>
+        <span class="nav-label">Mission Timeline</span>
+      </button>
+      <button class="nav-item" data-tab="tab-data">
+        <span class="nav-icon">💾</span>
+        <span class="nav-label">Mission Data & Sync</span>
+      </button>
+      <button class="nav-item" data-tab="tab-settings">
+        <span class="nav-icon">⚙</span>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Astronaut Profile Card at Sidebar Bottom -->
+    <div class="sidebar-profile" id="sidebar-profile-card">
+      <div class="profile-avatar">AC</div>
+      <div class="profile-info">
+        <div class="profile-name" id="sidebar-astro-name">CDR. Alex Chen</div>
+        <div class="profile-role" id="sidebar-astro-role">Commander · ASTRO-1</div>
+      </div>
+      <button class="profile-switch-btn" id="sidebar-switch-astro" title="Switch Astronaut Profile">⇄</button>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT CONTAINER
+       ============================================================ -->
+  <div class="app-main">
+
+    <!-- Top Aerospace Header Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="mission-status-chip">
+          <span class="pulse-dot"></span>
+          <span id="header-mission-status">AUTONOMOUS EDGE MONITORING</span>
+        </div>
+        <div class="header-meta-text">
+          <span id="header-date">Mission Day 30 of 180</span> · <span id="header-phase">Outbound Cruise</span> · <span class="header-met" id="header-met">MET +030:14:22:05</span>
         </div>
       </div>
-      <h3>Next action</h3>
-      <div id="na"></div>
-    </div>
-    <div class="panel">
-      <h2>Top concerns</h2>
-      <div id="tc"></div>
-      <h3>Forecast</h3>
-      <div id="fc"></div>
-    </div>
-  </section>
 
-  <!-- ── Main layout: 3D body scan (centre) + domain grid ── -->
-  <div class="main-layout">
+      <div class="header-right">
+        <!-- Search bar -->
+        <div class="header-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="header-search-input" placeholder="Search vitals, telemetry, protocol..." aria-label="Search vitals and telemetry">
+        </div>
 
-    <!-- 3D Body Scan — centred, large -->
-    <div class="body3d-wrap">
-      <h3 class="body3d-title">🧬 3D Body Scan <span class="mu" style="font-weight:400;font-size:.85rem">· Click a highlighted zone</span></h3>
-      <div class="body3d-stage">
-        <canvas id="body3d-canvas"></canvas>
-        <div id="body3d-status" class="body3d-status">Loading 3D scan…</div>
-        <!-- Zone legend overlaid at bottom of canvas -->
-        <div class="zone-legend" id="zone-legend"></div>
+        <!-- System Status Pills -->
+        <div class="header-pill status-ok" id="header-db-pill" title="Local IndexedDB Engine">
+          <span class="pill-dot"></span>
+          <span>IndexedDB Online</span>
+        </div>
+
+        <div class="header-pill status-ok" id="header-fastapi-pill" title="Python FastAPI Intelligence & Research Engine (:8000)">
+          <span class="pill-dot"></span>
+          <span id="fastapi-status-label">FastAPI :8000</span>
+        </div>
+
+        <div class="header-pill status-delay" id="header-comms-pill" title="Deep Space Network Communications Delay">
+          <span class="pill-dot"></span>
+          <span id="comms-status-label">LOS · Delay 14m 22s</span>
+        </div>
+
+        <!-- Quick Actions -->
+        <button id="quick-checkin-btn" class="header-action-btn primary" title="Open Daily Check-in">📋 Check-in</button>
+        <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">🚨 Contact Ground</button>
+        <button id="quick-ground-btn" class="header-action-btn" title="Export Ground Summary">📡 Ground Export</button>
+        <button id="crew-ripple-btn" class="header-action-btn" title="Crew Ripple Comparison">👥 Crew</button>
+        <button id="mute-toggle-btn" class="header-action-btn icon-only" title="Toggle Audio Alarms">🔊</button>
+      </div>
+    </header>
+
+    <!-- Global Solar / Environmental Banner -->
+    <div id="global-alert-banner"></div>
+
+    <!-- Tab Container Views -->
+    <main class="content-scroll">
+
+      <!-- ============================================================
+           TAB 1: MISSION OVERVIEW DASHBOARD (Reference 1 & 2 Combined)
+           ============================================================ -->
+      <div id="tab-overview" class="view-panel active">
+
+        <!-- Top Analytical KPI Summary Cards (Reference 2 Inspired) -->
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Overall Health</span>
+              <span class="kpi-icon ok">💚</span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-val" id="kpi-health-status">Ready</span>
+              <span class="kpi-sub" id="kpi-health-sub">All Nominals</span>
+            </div>
+            <div class="kpi-spark-wrap" id="kpi-spark-health"></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Active Alerts</span>
+              <span class="kpi-icon warn">⚠️</span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-val" id="kpi-alert-count">0</span>
+              <span class="kpi-sub" id="kpi-alert-tier">Tier 0 (Self-Manage)</span>
+            </div>
+            <div class="kpi-spark-wrap" id="kpi-spark-alerts"></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Indicators Nominal</span>
+              <span class="kpi-icon cyan">📊</span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-val" id="kpi-norm-count">17 / 17</span>
+              <span class="kpi-sub">Within ±1.3 SD</span>
+            </div>
+            <div class="kpi-spark-wrap" id="kpi-spark-norm"></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Cumulative Radiation</span>
+              <span class="kpi-icon rad">☢</span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-val" id="kpi-rad-val">54.2 mSv</span>
+              <span class="kpi-sub">of 1000 mSv Limit</span>
+            </div>
+            <div class="kpi-spark-wrap" id="kpi-spark-rad"></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Predictive Forecast</span>
+              <span class="kpi-icon time">🔮</span>
+            </div>
+            <div class="kpi-value-row">
+              <span class="kpi-val" id="kpi-forecast-val">Nominal</span>
+              <span class="kpi-sub" id="kpi-forecast-sub">No drift detected</span>
+            </div>
+            <div class="kpi-spark-wrap" id="kpi-spark-forecast"></div>
+          </div>
+        </section>
+
+        <!-- Command Centre Centerpiece: Futuristic Holographic Digital Twin & Live Physiology (Reference 1) -->
+        <section class="diagnostic-workstation-grid">
+
+          <!-- Center Left: Human Anatomical Digital Twin (Reference 1 Panel 04) -->
+          <div class="card-panel digital-twin-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <span class="panel-tag">04 / ANATOMICAL DIGITAL TWIN</span>
+                <h3>HOLOGRAPHIC PHYSIOLOGICAL MAPPING</h3>
+              </div>
+              <div class="panel-status-tag">
+                <span class="pulse-dot"></span> MODEL ONLINE
+              </div>
+            </div>
+
+            <!-- Layer Toggles Bar (Reference 1) -->
+            <div class="twin-layer-bar">
+              <label class="layer-toggle"><input type="checkbox" id="layer-surface" checked> Surface</label>
+              <label class="layer-toggle"><input type="checkbox" id="layer-skeleton" checked> Skeleton</label>
+              <label class="layer-toggle"><input type="checkbox" id="layer-organs" checked> Organs</label>
+              <label class="layer-toggle"><input type="checkbox" id="layer-vascular" checked> Vascular</label>
+              <div class="layer-hint">Click organ or callout node to inspect</div>
+            </div>
+
+            <!-- Central Holographic Body Visualization -->
+            <div class="twin-viewport-container">
+              <div class="scan-plane-line" id="scan-plane-anim"></div>
+
+              <!-- Main SVG Anatomical Digital Twin with Interactive Organ Hotspots -->
+              <svg id="anatomical-digital-twin-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+                <!-- Circular Glowing Diagnostic Pedestal at Feet -->
+                <ellipse cx="200" cy="565" rx="140" ry="24" fill="none" stroke="rgba(54, 230, 208, 0.25)" stroke-width="1.5" stroke-dasharray="6 4"/>
+                <ellipse cx="200" cy="565" rx="110" ry="18" fill="rgba(54, 230, 208, 0.05)" stroke="rgba(54, 230, 208, 0.45)" stroke-width="1.2"/>
+                <ellipse cx="200" cy="565" rx="70" ry="11" fill="none" stroke="rgba(66, 185, 232, 0.6)" stroke-width="1"/>
+
+                <!-- Coordinate Grid Crosshairs & Radar Markers -->
+                <line x1="20" x2="380" y1="300" y2="300" stroke="rgba(66, 185, 232, 0.12)" stroke-dasharray="2 4"/>
+                <line x1="200" x2="200" y1="40" y2="560" stroke="rgba(66, 185, 232, 0.12)" stroke-dasharray="2 4"/>
+
+                <!-- Whole-Body Translucent Holographic Surface Envelope (Layer 1) -->
+                <g id="twin-surface-group" class="twin-layer">
+                  <!-- Head Contour -->
+                  <path d="M175,70 C175,40 225,40 225,70 C225,95 215,108 200,110 C185,108 175,95 175,70 Z" fill="rgba(54, 230, 208, 0.06)" stroke="rgba(54, 230, 208, 0.5)" stroke-width="1.5"/>
+                  <!-- Neck & Shoulders -->
+                  <path d="M190,110 L188,126 L140,146 L130,240 L115,340 L110,380 L126,380 L138,280 L146,180 L158,160 L158,260 L165,340 L160,450 L155,540 L178,545 L186,460 L192,340 L200,280 L208,340 L214,460 L222,545 L245,540 L240,450 L235,340 L242,260 L242,160 L254,180 L262,280 L274,380 L290,380 L285,340 L270,240 L260,146 L212,126 L210,110 Z" fill="rgba(54, 230, 208, 0.04)" stroke="rgba(54, 230, 208, 0.35)" stroke-width="1.2"/>
+                </g>
+
+                <!-- Skeletal Framework (Layer 2) -->
+                <g id="twin-skeleton-group" class="twin-layer">
+                  <!-- Cranium Base -->
+                  <ellipse cx="200" cy="72" rx="20" ry="24" fill="none" stroke="#42B9E8" stroke-width="1.2" opacity=".7"/>
+                  <!-- Vertebral Spine Column -->
+                  <line x1="200" y1="110" x2="200" y2="280" stroke="#36E6D0" stroke-width="3" stroke-dasharray="4 2"/>
+                  <!-- Clavicles & Rib Cage -->
+                  <path d="M160,135 Q200,145 240,135" fill="none" stroke="#42B9E8" stroke-width="2"/>
+                  <path d="M165,155 Q200,165 235,155 M166,170 Q200,180 234,170 M168,185 Q200,195 232,185 M172,200 Q200,210 228,200 M176,215 Q200,222 224,215" fill="none" stroke="rgba(54, 230, 208, 0.5)" stroke-width="1.2"/>
+                  <!-- Pelvis Girdle -->
+                  <path d="M170,265 C180,250 220,250 230,265 C235,285 220,295 200,295 C180,295 165,285 170,265 Z" fill="none" stroke="#42B9E8" stroke-width="1.8"/>
+                  <!-- Limbs Skeleton Lines -->
+                  <line x1="150" y1="145" x2="128" y2="235" stroke="#42B9E8" stroke-width="2"/>
+                  <line x1="128" y1="235" x2="118" y2="340" stroke="#42B9E8" stroke-width="1.5"/>
+                  <line x1="250" y1="145" x2="272" y2="235" stroke="#42B9E8" stroke-width="2"/>
+                  <line x1="272" y1="235" x2="282" y2="340" stroke="#42B9E8" stroke-width="1.5"/>
+                  <!-- Legs Skeleton Lines -->
+                  <line x1="182" y1="290" x2="175" y2="420" stroke="#42B9E8" stroke-width="2.2"/>
+                  <line x1="175" y1="420" x2="168" y2="535" stroke="#42B9E8" stroke-width="1.8"/>
+                  <line x1="218" y1="290" x2="225" y2="420" stroke="#42B9E8" stroke-width="2.2"/>
+                  <line x1="225" y1="420" x2="232" y2="535" stroke="#42B9E8" stroke-width="1.8"/>
+                </g>
+
+                <!-- Vascular Network (Layer 3) -->
+                <g id="twin-vascular-group" class="twin-layer">
+                  <path d="M200,165 Q195,140 196,110 M200,165 Q205,140 204,110" stroke="#FF5E68" stroke-width="1.5" fill="none" opacity=".7"/>
+                  <path d="M200,200 L198,280 L184,360 L176,520 M200,200 L202,280 L216,360 L224,520" stroke="#36E6D0" stroke-width="1.5" fill="none" opacity=".6"/>
+                </g>
+
+                <!-- Interactive Internal Organs & Systems (Layer 4) -->
+                <g id="twin-organs-group" class="twin-layer">
+                  <!-- Brain / Cranial Hotspot (beh) -->
+                  <g class="twin-hotspot" data-domain="beh" data-organ="brain" id="hotspot-brain">
+                    <ellipse cx="200" cy="72" rx="17" ry="20" fill="rgba(66, 185, 232, 0.25)" stroke="#36E6D0" stroke-width="2"/>
+                    <circle cx="200" cy="72" r="4" fill="#36E6D0" class="pulse-node"/>
+                  </g>
+
+                  <!-- Cardiopulmonary: Heart Hotspot (car) -->
+                  <g class="twin-hotspot" data-domain="car" data-organ="heart" id="hotspot-heart">
+                    <path d="M195,170 C190,160 175,165 180,180 C185,195 200,205 200,205 C200,205 215,195 220,180 C225,165 210,160 205,170 Z" fill="rgba(255, 94, 104, 0.45)" stroke="#FF5E68" stroke-width="2" class="beating-heart"/>
+                  </g>
+
+                  <!-- Cardiopulmonary: Lungs Hotspot (env) -->
+                  <g class="twin-hotspot" data-domain="env" data-organ="lungs" id="hotspot-lungs">
+                    <ellipse cx="178" cy="180" rx="14" ry="22" fill="rgba(66, 185, 232, 0.2)" stroke="#42B9E8" stroke-width="1.5"/>
+                    <ellipse cx="222" cy="180" rx="14" ry="22" fill="rgba(66, 185, 232, 0.2)" stroke="#42B9E8" stroke-width="1.5"/>
+                  </g>
+
+                  <!-- Abdominal & Systemic Immune Hotspot (imm) -->
+                  <g class="twin-hotspot" data-domain="imm" data-organ="abdomen" id="hotspot-abdomen">
+                    <ellipse cx="200" cy="240" rx="26" ry="18" fill="rgba(54, 214, 154, 0.25)" stroke="#36D69A" stroke-width="1.8"/>
+                  </g>
+
+                  <!-- Musculoskeletal: Upper Arms & Grip (msk) -->
+                  <g class="twin-hotspot" data-domain="msk" data-organ="arms" id="hotspot-arms">
+                    <rect x="110" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.15)" stroke="rgba(66, 185, 232, 0.5)" stroke-width="1.2"/>
+                    <rect x="266" y="150" width="24" height="180" rx="10" fill="rgba(66, 185, 232, 0.15)" stroke="rgba(66, 185, 232, 0.5)" stroke-width="1.2"/>
+                  </g>
+
+                  <!-- Musculoskeletal: Lower Limbs & Bone Loading (msk) -->
+                  <g class="twin-hotspot" data-domain="msk" data-organ="legs" id="hotspot-legs">
+                    <rect x="156" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.12)" stroke="rgba(66, 185, 232, 0.4)" stroke-width="1.2"/>
+                    <rect x="210" y="300" width="34" height="230" rx="10" fill="rgba(66, 185, 232, 0.12)" stroke="rgba(66, 185, 232, 0.4)" stroke-width="1.2"/>
+                  </g>
+                </g>
+                </svg>
+
+                <!-- Technical Callout Pointer Lines (Reference 1 Style) -->
+                <div class="twin-callouts-overlay">
+                  <div class="twin-callout top-left" data-target="brain">
+                    <span class="callout-tag">01 / CRANIAL</span>
+                    <span class="callout-val" id="callout-brain-val">NEURAL NOMINAL</span>
+                    <span class="callout-sub">Mood 7.0 · Stress 3.0</span>
+                  </div>
+
+                  <div class="twin-callout mid-left" data-target="heart">
+                    <span class="callout-tag">02 / CARDIOPULMONARY</span>
+                    <span class="callout-val" id="callout-heart-val">62 BPM · 118/76</span>
+                    <span class="callout-sub">HRV 58ms · SpO2 98.2%</span>
+                  </div>
+
+                  <div class="twin-callout bottom-left" data-target="abdomen">
+                    <span class="callout-tag">03 / IMMUNE & METABOLIC</span>
+                    <span class="callout-val" id="callout-imm-val">36.6 °C · NOMINAL</span>
+                    <span class="callout-sub">Fatigue 3.0 · Hydration 8gl</span>
+                  </div>
+
+                  <div class="twin-callout mid-right" data-target="lungs">
+                    <span class="callout-tag">04 / HABITAT AIRWAY</span>
+                    <span class="callout-val" id="callout-lungs-val">CO2: 3.0 mmHg</span>
+                    <span class="callout-sub">Nominal Cabin Quality</span>
+                  </div>
+
+                  <div class="twin-callout bottom-right" data-target="legs">
+                    <span class="callout-tag">05 / MUSCULOSKELETAL</span>
+                    <span class="callout-val" id="callout-msk-val">Grip: 40.0 kg</span>
+                    <span class="callout-sub">Daily Exercise: 110 min</span>
+                  </div>
+                </div>
+              </div>
+
+            <!-- Organ Inspection Drawer (Opens when user selects an anatomical area) -->
+            <div class="organ-inspector-drawer" id="organ-inspector-drawer">
+              <div class="inspector-header">
+                <span class="inspector-title" id="inspector-organ-title">CRANIAL / NEURAL MAP</span>
+                <button class="inspector-close" id="inspector-close-btn">×</button>
+              </div>
+              <div class="inspector-body" id="inspector-organ-content">
+                <!-- Dynamically populated on hotspot click -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Right: Live Physiology Panel & ECG Waveform (Reference 1 Panel 05) -->
+          <div class="card-panel live-phys-panel">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <span class="panel-tag">05 / LIVE PHYSIOLOGY</span>
+                <h3>REAL-TIME BIOMETRIC TELEMETRY</h3>
+              </div>
+              <span class="live-signal-badge">DEMO SIGNAL · 99.8% QOS</span>
+            </div>
+
+            <!-- Big Digital Readout Grid -->
+            <div class="phys-readouts-grid">
+              <div class="phys-readout-item">
+                <span class="phys-lbl">HEART RATE</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-hr-val">62</strong>
+                  <span class="phys-unit">BPM</span>
+                </div>
+                <span class="phys-status ok" id="live-hr-status">● NOMINAL</span>
+              </div>
+
+              <div class="phys-readout-item">
+                <span class="phys-lbl">OXYGEN SAT (SPO2)</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-spo2-val">98.2</strong>
+                  <span class="phys-unit">%</span>
+                </div>
+                <span class="phys-status ok" id="live-spo2-status">● OPTIMAL</span>
+              </div>
+
+              <div class="phys-readout-item">
+                <span class="phys-lbl">BLOOD PRESSURE</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-bp-val">118/76</strong>
+                  <span class="phys-unit">mmHg</span>
+                </div>
+                <span class="phys-status ok" id="live-bp-status">● NORMOTENSIVE</span>
+              </div>
+
+              <div class="phys-readout-item">
+                <span class="phys-lbl">CORE TEMPERATURE</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-temp-val">36.6</strong>
+                  <span class="phys-unit">°C</span>
+                </div>
+                <span class="phys-status ok" id="live-temp-status">● AFEBRILE</span>
+              </div>
+            </div>
+
+            <!-- Real-Time Simulated ECG Oscilloscope Waveform (Reference 1) -->
+            <div class="ecg-oscilloscope-card">
+              <div class="ecg-header">
+                <span class="ecg-title">ECG / LEAD II MONITOR (SYNTHESIZED HARMONIC)</span>
+                <span class="ecg-speed">25 mm/s · 10 mm/mV</span>
+              </div>
+              <canvas id="ecg-canvas" width="600" height="120" class="ecg-canvas"></canvas>
+            </div>
+
+            <!-- Next Clinical Action Card -->
+            <div class="action-recommendation-box" id="overview-action-box">
+              <div class="action-header">
+                <span class="action-tag">CLINICAL ACTION PROTOCOL</span>
+                <span class="action-tier" id="overview-action-tier">TIER 0</span>
+              </div>
+              <p class="action-text" id="overview-action-text">Maintain standard flight conditioning routine and log scheduled daily check-in.</p>
+            </div>
+
+            <!-- Top Concerns & Active Rules -->
+            <div class="concerns-card" id="overview-concerns-card">
+              <h4>ACTIVE RISK FACTORS</h4>
+              <div id="overview-concerns-list" class="concerns-list">
+                <span class="mu">No clinical alerts currently active. Physiological vitals stable.</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- All 17 Physiological Vitals Cards Grid (Part 4C) -->
+        <section class="vitals-matrix-section">
+          <div class="section-title-row">
+            <div>
+              <h3>17-PARAMETER ASTRONAUT TELEMETRY MATRIX</h3>
+              <span class="mu">Continuous multimodal biometrics vs. individualized flight baseline</span>
+            </div>
+            <div class="matrix-legend">
+              <span class="leg-item"><span class="dot ok"></span> Normal (&lt;1.3 SD)</span>
+              <span class="leg-item"><span class="dot warn"></span> Watch (&ge;1.3 SD)</span>
+              <span class="leg-item"><span class="dot crit"></span> Act (&ge;2.3 SD)</span>
+            </div>
+          </div>
+
+          <div class="vitals-matrix-grid" id="vitals-matrix-grid">
+            <!-- 17 Metric cards rendered dynamically by app.js -->
+          </div>
+        </section>
+
+        <!-- Multi-Metric Cardiac & Physiological Trend Charts (Reference 2 Bottom Section) -->
+        <section class="overview-charts-grid">
+          <div class="card-panel chart-card">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <span class="panel-tag">CARDIAC VITALS TREND</span>
+                <h4>Heart Rate, Blood Pressure & Oxygen Saturation</h4>
+              </div>
+              <div class="filter-pill-group" id="cardiac-range-selector">
+                <button class="filter-pill active" data-days="7">7D</button>
+                <button class="filter-pill" data-days="14">14D</button>
+                <button class="filter-pill" data-days="30">30D</button>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap" id="cardiac-multi-chart"></div>
+            <div class="chart-legend-row">
+              <span class="chart-leg-item"><span class="swatch" style="background:#36E6D0"></span> Heart Rate (bpm)</span>
+              <span class="chart-leg-item"><span class="swatch" style="background:#FF5E68"></span> BP Systolic (mmHg)</span>
+              <span class="chart-leg-item"><span class="swatch" style="background:#42B9E8"></span> SpO2 (%)</span>
+            </div>
+          </div>
+
+          <div class="card-panel queue-card">
+            <div class="panel-header">
+              <div class="panel-title-wrap">
+                <span class="panel-tag">CLINICAL DOMAIN TRIAGE</span>
+                <h4>Multi-System Risk Status</h4>
+              </div>
+              <button class="btn-sm" id="btn-open-ground-summary">Transcribe Telemetry</button>
+            </div>
+            <div class="triage-table-wrap">
+              <table class="triage-table">
+                <thead>
+                  <tr>
+                    <th>Domain</th>
+                    <th>Status</th>
+                    <th>Primary Metric</th>
+                    <th>Drift</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="overview-triage-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
       </div>
 
-      <!-- Improvements panel — shown when a zone has status ≥ 1 -->
-      <div class="improvements-panel" id="improvements-panel" style="display:none">
-        <div class="impv-header">
-          <span class="impv-icon" id="impv-icon">⚠️</span>
-          <div>
-            <div class="impv-title" id="impv-title">Domain</div>
-            <div class="impv-status" id="impv-status"></div>
+      <!-- ============================================================
+           TAB 2: HEALTH MONITORING (Part 7)
+           ============================================================ -->
+      <div id="tab-monitoring" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">HIGH-PRECISION TELEMETRY</span>
+              <h3>INDIVIDUAL BIOMETRIC MONITORING & CONFIDENCE BANDS</h3>
+            </div>
+            <div class="controls-row">
+              <select id="mon-metric-select" class="form-select"></select>
+              <div class="filter-pill-group" id="mon-range-group">
+                <button class="filter-pill active" data-range="7">7 Days</button>
+                <button class="filter-pill" data-range="14">14 Days</button>
+                <button class="filter-pill" data-range="30">30 Days</button>
+                <button class="filter-pill" data-range="180">Full 180D</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Large High-Precision Time-Series SVG Chart with ±1 SD / ±2 SD Shaded Bands -->
+          <div class="chart-container" id="mon-chart-container"></div>
+
+          <!-- Metric Context & Clinical Explanation -->
+          <div class="metric-expl-card" id="mon-metric-info"></div>
+
+          <!-- Historical Data Table -->
+          <h4 style="margin:20px 0 8px">HISTORICAL TELEMETRY LOG TABLE</h4>
+          <div class="table-wrap">
+            <table class="data-table" id="mon-data-table">
+              <thead>
+                <tr>
+                  <th>Mission Day</th>
+                  <th>Value</th>
+                  <th>Baseline</th>
+                  <th>Signed Z-Score</th>
+                  <th>EWMA Drift</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="mon-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 3: HEALTH INTELLIGENCE / CDSS (Part 8)
+           ============================================================ -->
+      <div id="tab-intelligence" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">CLINICAL DECISION SUPPORT SYSTEM</span>
+              <h3>DETERMINISTIC MULTI-PARAMETER RISK DETECTION</h3>
+            </div>
+            <span class="panel-status-tag"><span class="pulse-dot"></span> CDSS CORE ACTIVE</span>
+          </div>
+
+          <p class="mu">ASTRA evaluates personal baseline deviations, EWMA drift ($\lambda = 0.3$), 2-day persistence, and multi-domain synergy rules. <em>Decision support only — not a medical diagnosis.</em></p>
+
+          <div class="cdss-summary-grid">
+            <div class="cdss-stat-card">
+              <span class="cdss-stat-num ok" id="intel-norm-count">0</span>
+              <span class="cdss-stat-label">Normal Domains</span>
+            </div>
+            <div class="cdss-stat-card">
+              <span class="cdss-stat-num warn" id="intel-watch-count">0</span>
+              <span class="cdss-stat-label">Attention (Watch)</span>
+            </div>
+            <div class="cdss-stat-card">
+              <span class="cdss-stat-num crit" id="intel-act-count">0</span>
+              <span class="cdss-stat-label">High Priority (Act)</span>
+            </div>
+            <div class="cdss-stat-card">
+              <span class="cdss-stat-num" id="intel-tier">Tier 0</span>
+              <span class="cdss-stat-label">Escalation Tier</span>
+            </div>
+          </div>
+
+          <!-- Active Cross-Domain Synergy Rules -->
+          <h4 style="margin:20px 0 8px">ACTIVE MULTI-PARAMETER SYNERGIES & HEURISTIC RULES</h4>
+          <div id="intel-rules-list" class="rules-list-wrap"></div>
+
+          <!-- Domain Risk Explanatory Cards -->
+          <h4 style="margin:20px 0 8px">EXPLAINABLE DOMAIN RISK ANALYSIS</h4>
+          <div id="intel-domain-cards" class="intel-cards-grid"></div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 4: DAILY CHECK-IN (Part 9)
+           ============================================================ -->
+      <div id="tab-checkin" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">SUBJECTIVE TELEMETRY</span>
+              <h3>DAILY ASTRONAUT WELLNESS CHECK-IN</h3>
+            </div>
+            <span class="header-pill status-ok">Synchronized with IndexedDB</span>
+          </div>
+
+          <p class="mu">Captures subjective fatigue, mood, stress, hydration, and symptoms. Stored into local IndexedDB and automatically added to the store-and-forward telemetry queue.</p>
+
+          <form id="checkin-form" class="checkin-form">
+            <div class="checkin-grid" id="full-checkin-fields"></div>
+
+            <h4 style="margin:20px 0 8px">REPORTED CLINICAL SYMPTOMS</h4>
+            <div class="symptoms-chips" id="symptoms-chips">
+              <label class="chip-check"><input type="checkbox" value="None" checked> None / Asymptomatic</label>
+              <label class="chip-check"><input type="checkbox" value="Headache"> Headache / Intracranial Pressure</label>
+              <label class="chip-check"><input type="checkbox" value="Nausea"> Space Adaptation Motion Sickness</label>
+              <label class="chip-check"><input type="checkbox" value="Fatigue"> Cognitive / Physical Fatigue</label>
+              <label class="chip-check"><input type="checkbox" value="BackPain"> Microgravity Back Elongation Pain</label>
+              <label class="chip-check"><input type="checkbox" value="EyeIrritation"> Eye Strain / SANS Symptom</label>
+              <label class="chip-check"><input type="checkbox" value="Insomnia"> Circadian / Sleep Disruption</label>
+            </div>
+
+            <h4 style="margin:20px 0 8px">FLIGHT SURGEON OPERATIONAL NOTES</h4>
+            <textarea id="checkin-notes" class="form-textarea" rows="3" placeholder="Log any physical discomfort, sleep disturbances, workload stress, or habitat issues..."></textarea>
+
+            <div class="checkin-actions">
+              <button type="submit" class="header-action-btn primary btn-lg">💾 Save Check-in to IndexedDB</button>
+              <span class="save-feedback" id="checkin-feedback"></span>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 5: RADIATION INTELLIGENCE (Part 10)
+           ============================================================ -->
+      <div id="tab-radiation" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">DEEP SPACE DOSIMETRY</span>
+              <h3>RADIATION EXPOSURE & STORM SHELTER MONITOR</h3>
+            </div>
+            <span class="header-pill status-ok">CSA & NASA HRP Model</span>
+          </div>
+
+          <div class="rad-overview-grid">
+            <div class="rad-gauge-card">
+              <h4>Cumulative Mission Dose</h4>
+              <div class="rad-num" id="rad-cum-num">54.2 mSv</div>
+              <div class="bar rad-bar"><i id="rad-bar-fill" style="width:5.4%"></i></div>
+              <span class="mu" id="rad-cum-sub">54 of 1000 mSv Career Dose Limit (5.4%)</span>
+            </div>
+
+            <div class="rad-gauge-card">
+              <h4>Daily Exposure Rate</h4>
+              <div class="rad-num" id="rad-daily-num">1.8 mSv/day</div>
+              <div class="mu">SPE Trigger Threshold: &gt; 5.0 mSv/day</div>
+              <div class="badge-status" id="rad-spe-status">Nominal GCR Background</div>
+            </div>
+
+            <div class="rad-gauge-card">
+              <h4>Post-SPE Immune Window</h4>
+              <div class="rad-num" id="rad-spe-window">Active Watch: 0 Days</div>
+              <div class="mu">Immune alert thresholds automatically tightened by 0.75× following solar particle events.</div>
+            </div>
+          </div>
+
+          <div class="csa-rad-box">
+            <h4>🍁 Canadian Space Agency (CSA) & NASA Biodosimetry Alignment</h4>
+            <p>In deep space beyond Earth's magnetosphere, crew members are exposed to constant Galactic Cosmic Radiation (GCR) and acute Solar Particle Events (SPE). Research from the CSA (EVARM, MOSFET dosimeters, Radi-N bubble detectors, and CANS spectrometers) proves that ionizing radiation causes cumulative DNA double-strand breaks and suppresses bone marrow hematopoiesis.</p>
+            <p><strong>Emergency Shelter Protocol:</strong> When acute dosimeter rates exceed 5.0 mSv/day, astronauts must immediately retreat to the water-shielded storm shelter module and log occupancy until cleared by Ground Control.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 6: MENTAL HEALTH & BEHAVIORAL RESILIENCE (Part 11)
+           ============================================================ -->
+      <div id="tab-mental" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">BEHAVIORAL HEALTH</span>
+              <h3>PSYCHOLOGICAL RESILIENCE & CIRCADIAN SYNCHRONY</h3>
+            </div>
+            <span class="header-pill status-ok">Isolation Protocol Active</span>
+          </div>
+
+          <div class="mental-grid">
+            <div class="mental-stat-card">
+              <h4>Mood vs. Stress Dynamics</h4>
+              <div id="mental-mood-stress" class="mental-big-val">7.0 / 3.0</div>
+              <span class="mu">Subjective wellbeing score vs. workload stress</span>
+            </div>
+
+            <div class="mental-stat-card">
+              <h4>Circadian Sleep Duration</h4>
+              <div id="mental-sleep-val" class="mental-big-val">7.2 h</div>
+              <span class="mu">Target: 8.0 hours uninterrupted rest</span>
+            </div>
+
+            <div class="mental-stat-card">
+              <h4>Cognitive Fatigue Index</h4>
+              <div id="mental-fatigue-val" class="mental-big-val">3.0 / 10</div>
+              <span class="mu">Psychomotor vigilance surrogate indicator</span>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top:16px;background:var(--pn2)">
+            <h4>NASA BEHAVIORAL COUNTERMEASURE PROTOCOLS</h4>
+            <ul>
+              <li><strong>Sleep Hygiene:</strong> Shift cabin LED spectrum to melatonin-friendly 6500K dim lighting 60 min before rest cycle.</li>
+              <li><strong>Social Support:</strong> Schedule weekly private video conferences and crew shared meals to counter confinement syndrome.</li>
+              <li><strong>Cognitive Decompression:</strong> If stress exceeds 6.0 for &gt;2 consecutive days, involve Crew Medical Officer for debriefing.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 7: BONE & MUSCLE HEALTH (Part 12)
+           ============================================================ -->
+      <div id="tab-msk" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">MUSCULOSKELETAL INTEGRITY</span>
+              <h3>EXERCISE LOADING & BONE DECONDITIONING RISK</h3>
+            </div>
+            <span class="header-pill status-ok">ARED / CEVIS Protocol</span>
+          </div>
+
+          <!-- Measured vs Inferred Risk Breakdown -->
+          <div class="measured-vs-inferred-grid">
+            <div class="mvi-card">
+              <span class="mvi-tag direct">DIRECTLY MEASURED PARAMETERS</span>
+              <div class="mvi-val-row">
+                <div>
+                  <span class="mvi-lbl">DAILY RESISTIVE EXERCISE</span>
+                  <strong class="mvi-num" id="msk-ex-val">110 min</strong>
+                  <span class="mu">Nominal Target: 120 min</span>
+                </div>
+                <div>
+                  <span class="mvi-lbl">GRIP STRENGTH DYNAMOMETRY</span>
+                  <strong class="mvi-num" id="msk-grip-val">40.0 kg</strong>
+                  <span class="mu">Baseline: 40.0 kg</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mvi-card">
+              <span class="mvi-tag inferred">INFERRED CLINICAL HEALTH RISKS</span>
+              <div class="mvi-val-row">
+                <div>
+                  <span class="mvi-lbl">BONE MINERAL DENSITY (BMD) LOSS</span>
+                  <strong class="mvi-num ok" id="msk-bmd-risk">Low Risk (Est. -0.8%/mo)</strong>
+                  <span class="mu">Calculated from cumulative loading deficit</span>
+                </div>
+                <div>
+                  <span class="mvi-lbl">MUSCLE FIBER ATROPHY RISK</span>
+                  <strong class="mvi-num ok" id="msk-atrophy-risk">Nominal Tone Maintained</strong>
+                  <span class="mu">Correlated with grip & resistive consistency</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top:16px;background:var(--pn2)">
+            <h4>NASA COUNTERMEASURES MANDATE</h4>
+            <p>Without Earth's gravitational vector, astronauts lose 1–1.5% bone mineral density per month in the femoral neck and lumbar spine, alongside rapid postural muscle atrophy. Daily resistive exercise on ARED (Advanced Resistive Exercise Device) combined with protein-rich nutrition is critical for deep-space mission readiness.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 8: ENVIRONMENTAL MONITORING (Part 13)
+           ============================================================ -->
+      <div id="tab-env" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">LIFE SUPPORT INTEGRATION</span>
+              <h3>CABIN AIR & CO2 SCRUBBER INTELLIGENCE</h3>
+            </div>
+            <span class="header-pill status-ok">ECLSS Telemetry</span>
+          </div>
+
+          <div class="kpi-grid" style="margin:16px 0">
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-title">Cabin CO2 Partial Pressure</span></div>
+              <div class="kpi-value-row">
+                <span class="kpi-val" id="env-co2-val">3.0 mmHg</span>
+                <span class="kpi-sub" id="env-co2-sub">Nominal (~3900 ppm)</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-title">Hypercapnia Risk</span></div>
+              <div class="kpi-value-row">
+                <span class="kpi-val ok" id="env-hypercap-val">None</span>
+                <span class="kpi-sub">Alert Threshold: 5.5 mmHg</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-title">Habitat Scrubber State</span></div>
+              <div class="kpi-value-row">
+                <span class="kpi-val ok" id="env-scrubber-val">Optimal</span>
+                <span class="kpi-sub">Dual Bed Regenerative</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="csa-rad-box">
+            <h4>Habitat Environmental Rule (CO2 + Symptoms Synergy)</h4>
+            <p>In microgravity, air pockets without convection cause localized CO2 accumulation around crew work modules. Elevated CO2 directly mimics clinical illness, causing severe frontal headaches, sleep fragmentation, and irritability. ASTRA's habitat rule isolates cabin atmospheric spikes before attributing symptoms to biological pathology.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 9: MISSION TIMELINE (Part 14)
+           ============================================================ -->
+      <div id="tab-timeline" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">180-DAY TRAJECTORY SCRUBBER</span>
+              <h3>INTERACTIVE MISSION FLIGHT TIMELINE</h3>
+            </div>
+            <div class="timeline-quick-controls">
+              <button id="tl-play-btn" class="header-action-btn primary">▶ Play Flight</button>
+            </div>
+          </div>
+
+          <!-- Main Interactive Range Slider -->
+          <div class="timeline-scrubber-box">
+            <div class="scrub-label-row">
+              <strong id="tl-day-label">Mission Day 30 of 180</strong>
+              <span class="mu" id="tl-phase-label">Mars Transit Phase 1</span>
+            </div>
+            <input type="range" min="1" max="180" value="30" id="tl-slider" class="timeline-slider" aria-label="180-Day Mission Trajectory Scrubber">
+          </div>
+
+          <!-- Scripted Benchmark Scenario Jump Markers -->
+          <h4 style="margin:20px 0 8px">SIMULATED MISSION CLINICAL SCENARIOS (GROUND TRUTH)</h4>
+          <div class="timeline-jumps-grid" id="timeline-jumps-grid"></div>
+
+          <!-- Day Telemetry Snapshot Summary -->
+          <div class="card-panel" style="margin-top:16px;background:var(--pn2)">
+            <h4>DAY SNAPSHOT TELEMETRY SUMMARY</h4>
+            <div id="tl-snapshot-content" class="snapshot-grid"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 10: MISSION DATA & SYNCHRONIZATION (Part 15)
+           ============================================================ -->
+      <div id="tab-data" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">PERSISTENT STORAGE ARCHITECTURE</span>
+              <h3>INDEXEDDB STATUS & STORE-AND-FORWARD QUEUE</h3>
+            </div>
+            <span class="header-pill status-ok">Storage Quota Healthy</span>
+          </div>
+
+          <div class="db-stats-grid">
+            <div class="db-stat-item">
+              <strong id="db-stat-telemetry">180</strong>
+              <span>Stored Telemetry Records</span>
+            </div>
+            <div class="db-stat-item">
+              <strong id="db-stat-checkins">0</strong>
+              <span>Astronaut Check-ins</span>
+            </div>
+            <div class="db-stat-item">
+              <strong id="db-stat-alerts">0</strong>
+              <span>Clinical Alerts Logged</span>
+            </div>
+            <div class="db-stat-item">
+              <strong id="db-stat-sync">0</strong>
+              <span>Pending Sync Queue</span>
+            </div>
+          </div>
+
+          <div class="sync-actions-row">
+            <button id="btn-trigger-sync" class="header-action-btn primary">📡 Transmit Telemetry to Ground Control</button>
+            <button id="btn-export-ground" class="header-action-btn">📋 Transcribe Raw Telemetry Summary</button>
+            <span id="sync-status-msg" class="mu"></span>
+          </div>
+
+          <h4 style="margin:20px 0 8px">PENDING STORE-AND-FORWARD TRANSMISSION QUEUE</h4>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Queue ID</th>
+                  <th>Type</th>
+                  <th>Astronaut</th>
+                  <th>Mission Day</th>
+                  <th>Status</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="sync-queue-body">
+                <tr><td colspan="6" class="mu" style="text-align:center">No pending telemetry in synchronization queue. All records synchronized.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 11: SETTINGS (Part 16)
+           ============================================================ -->
+      <div id="tab-settings" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">MISSION CONFIGURATION</span>
+              <h3>CREW ROSTER & OPERATIONAL PARAMETERS</h3>
+            </div>
+            <span class="header-pill status-ok">Ares Transit Profile</span>
+          </div>
+
+          <h4 style="margin:16px 0 8px">SELECT ACTIVE CREW MEMBER PROFILE</h4>
+          <div class="astronaut-select-grid" id="astro-select-grid"></div>
+
+          <h4 style="margin:24px 0 8px">AUDIO ALERTS & PREFERENCES</h4>
+          <div class="settings-toggle-row">
+            <label class="layer-toggle"><input type="checkbox" id="setting-sound-alerts" checked> Enable Synthesized Web Audio Bio-Pings</label>
+          </div>
+
+          <h4 style="margin:24px 0 8px">DIAGNOSTIC RE-SEED & CACHE MANAGEMENT</h4>
+          <p class="mu">Resets local IndexedDB telemetry to the 180-day benchmark flight dataset without deleting user check-ins.</p>
+          <button id="btn-reseed-db" class="header-action-btn">🔄 Diagnostic Re-seed from Benchmark Dataset</button>
+          <span id="reseed-feedback" class="mu" style="margin-left:12px"></span>
+        </section>
+      </div>
+
+      <!-- Scientific Research Alignment Footer -->
+      <footer class="app-footer">
+        <div class="footer-inner">
+          <div class="footer-col">
+            <strong style="color:#36E6D0">🛸 NASA Human Research Program (HRP)</strong>
+            <p class="mu">RIDGE Hazards Framework · Risks Master List · Autonomous Medical Capability (AMC / ExMIPT).</p>
+          </div>
+          <div class="footer-col">
+            <strong style="color:#42B9E8">🍁 Canadian Space Agency (CSA)</strong>
+            <p class="mu">Active Dosimetry (EVARM, MOSFET, CANS) · Bubble Detectors (Radi-N) · Biodosimetry.</p>
+          </div>
+          <div class="footer-col">
+            <span class="mu">ASTRA Space Health Intelligence System · Prototype built for NASA Space Apps · Decision support only.</span>
           </div>
         </div>
-        <ul class="impv-list" id="impv-list"></ul>
-        <button class="impv-dismiss" id="impv-dismiss">✕ Dismiss</button>
-      </div>
-    </div>
+      </footer>
 
-    <!-- Domain cards + detail panel -->
-    <div class="right-col">
-      <div class="grid" id="gr"></div>
-      <section class="panel" id="dt" aria-live="polite"></section>
-    </div>
+    </main>
   </div>
+</div>
 
-  <p class="disclaimer">All data is simulated. Thresholds are placeholders for review by a flight surgeon.
-    No medicine doses are suggested — follow your onboard medical protocol.</p>
+<!-- ============================================================
+     MODALS & DIALOGS
+     ============================================================ -->
 
-  <!-- ── Resources footer ── -->
-  <footer class="resources-footer">
-    <div class="resources-inner">
-      <div class="resources-col">
-        <div class="resources-agency">
-          <span class="agency-logo">🛸</span>
-          <strong>NASA Human Research Program</strong>
-        </div>
-        <ul class="resources-list">
-          <li>
-            <a href="https://www.nasa.gov/hrp/hazards/" target="_blank" rel="noopener">
-              5 Hazards of Human Spaceflight
-            </a>
-            <span class="res-desc">Space radiation, isolation, distance, gravity, hostile environment</span>
-          </li>
-          <li>
-            <a href="https://www.nasa.gov/hrp/risks/" target="_blank" rel="noopener">
-              Risks of Human Spaceflight
-            </a>
-            <span class="res-desc">Immune changes, bone loss, cardiovascular events, behavioral health</span>
-          </li>
-          <li>
-            <a href="https://www.nasa.gov/hrp/ongoing-hrp-research/" target="_blank" rel="noopener">
-              Ongoing HRP Research in Space
-            </a>
-            <span class="res-desc">Active investigations aboard the ISS and beyond</span>
-          </li>
-        </ul>
-      </div>
-      <div class="resources-col">
-        <div class="resources-agency">
-          <span class="agency-logo">🍁</span>
-          <strong>Canadian Space Agency (CSA)</strong>
-        </div>
-        <ul class="resources-list">
-          <li>
-            <a href="https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp" target="_blank" rel="noopener">
-              Monitoring Radiation for Astronaut Health
-            </a>
-            <span class="res-desc">Canadian technologies measuring radiation exposure in space</span>
-          </li>
-          <li>
-            <a href="https://www.asc-csa.gc.ca/eng/iss/science/why-do-we-conduct-science-experiments-in-space.asp" target="_blank" rel="noopener">
-              Why Conduct Science Experiments in Space?
-            </a>
-            <span class="res-desc">How ISS research advances human health and future exploration</span>
-          </li>
-        </ul>
-      </div>
-      <div class="resources-col resources-col--disclaimer">
-        <p>
-          <strong>Mission Vitals</strong> is a hackathon project built for NASA's
-          <em>Space Apps Challenge</em>. Health domain descriptions, risk thresholds,
-          and educational content are informed by the NASA HRP and CSA resources listed here.
-        </p>
-        <p>
-          NASA does not endorse this tool. All data is simulated. This is decision
-          support, not a medical diagnosis. Follow your onboard medical protocol.
-        </p>
-        <p class="res-license">© 2026 Mission Vitals Team · MIT License</p>
-      </div>
-    </div>
-  </footer>
-</main>
-
-<!-- ── Tooltip (body map hover) ── -->
-<div class="body-tooltip" id="body-tooltip"></div>
-
-<!-- ── Ground Summary dialog ── -->
-<dialog id="dg">
-  <h2>📡 Ground summary (last 14 days)</h2>
-  <pre id="gt"></pre>
-  <div class="row" style="margin-top:12px">
-    <button id="cp" class="btn-primary">Copy</button>
-    <button id="cl">Close</button>
+<!-- Ground Summary Dialog -->
+<dialog id="dg" class="astra-modal">
+  <h2>📡 Ground Telemetry Summary (14-Day Rolling Window)</h2>
+  <pre id="gt" class="telemetry-pre"></pre>
+  <div class="modal-actions-row">
+    <button id="cp" class="header-action-btn primary">Copy to Clipboard</button>
+    <button id="cl" class="header-action-btn">Close</button>
   </div>
   <div class="mu" id="cm" style="margin-top:8px"></div>
 </dialog>
 
-<!-- ── Daily Check-in dialog ── -->
-<dialog id="cd">
-  <h2>📋 Daily check-in</h2>
-  <p class="mu">Takes ~30 seconds. Saved on this device only. Applied to current mission day.</p>
-  <div id="cf"></div>
-  <div class="row" style="margin-top:16px">
-    <button id="cs" class="btn-primary">Save check-in</button>
-    <button id="cx">Cancel</button>
-  </div>
-</dialog>
-
-<!-- ── Educational info dialog ── -->
-<dialog id="edu-modal">
+<!-- Educational Modal (NASA / CSA Foundations) -->
+<dialog id="edu-modal" class="astra-modal">
   <div class="edu-modal-content">
     <h2 id="edu-title"></h2>
     <p id="edu-about" class="mu"></p>
-    <h3>Why it matters in space (NASA HRP)</h3>
+    <h4>Why It Matters in Deep Space (NASA HRP)</h4>
     <p id="edu-nasa"></p>
-    <h3>What to do at each tier</h3>
+    <h4>Onboard Countermeasure Protocol</h4>
     <ul class="edu-tiers" id="edu-tiers"></ul>
     <div class="edu-sources" id="edu-sources"></div>
-    <div class="row" style="margin-top:16px">
-      <button id="edu-close" class="btn-primary">Close</button>
+    <div class="modal-actions-row" style="margin-top:16px">
+      <button id="edu-close" class="header-action-btn primary">Close</button>
     </div>
   </div>
 </dialog>
 
-<!-- ── Crew Ripple dialog ── -->
-<dialog id="crew-modal">
-  <h2>👥 Crew Ripple — Health Comparison</h2>
-  <p class="mu">Compare crew members to separate personal illness from shared habitat problems.
-    <em>Synthetic data for demonstration.</em></p>
+<!-- Crew Ripple Modal -->
+<dialog id="crew-modal" class="astra-modal">
+  <h2>👥 Crew Ripple — Multi-Astronaut Health Comparison</h2>
+  <p class="mu">Cross-correlate crew biometrics to distinguish personal clinical illness from life support atmospheric anomalies.</p>
   <div class="crew-grid" id="crew-grid"></div>
-  <div class="row" style="margin-top:14px">
-    <button id="crew-close" class="btn-primary">Close</button>
+  <div class="modal-actions-row" style="margin-top:14px">
+    <button id="crew-close" class="header-action-btn primary">Close</button>
   </div>
 </dialog>
+
+<!-- Emergency Escalation Dialog (Tier 3 Critical Health Event) -->
+<dialog id="emergency-modal" class="astra-modal emergency-critical-dialog">
+  <div class="emergency-modal-content">
+    <div class="emergency-badge">🚨 TIER 3 — CRITICAL HEALTH EVENT</div>
+    <h2 id="emergency-title">Critical Multi-System Physiological Alert</h2>
+    <div id="emergency-body" class="emergency-body"></div>
+    <div class="emergency-guidance">
+      <h4>Immediate Protocol:</h4>
+      <ul id="emergency-actions" class="emergency-actions-list"></ul>
+    </div>
+    <div class="emergency-comm-box" id="emergency-comm-box">
+      <div class="comm-status-line">Downlink Queue: <span id="emergency-comm-badge" class="badge-queued">LOCAL QUEUED (READY FOR TRANSMISSION)</span></div>
+      <p class="mu" style="font-size:11px; margin-top:4px;">Astronaut must explicitly confirm downlink transmission to dispatch report to Flight Surgeon ground console.</p>
+    </div>
+    <div class="modal-actions-row" style="margin-top:16px">
+      <button id="btn-transmit-ground" class="header-action-btn danger">📡 TRANSMIT TO GROUND CONSOLE</button>
+      <button id="btn-close-emergency" class="header-action-btn">Acknowledge & Close</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Tooltip for Anatomical Hotspots -->
+<div class="body-tooltip" id="body-tooltip"></div>
 
 <script type="module" src="app.js"></script>
 </body>
