@@ -86,13 +86,20 @@
 
         <div class="header-right">
           <div class="header-meta-text">
-            <span id="header-date">Mission Day 30 of 180</span> · <span id="header-phase">Outbound Cruise</span>
+            <span id="header-phase">Outbound Cruise</span>
           </div>
 
-          <!-- Timeline Quick Scrubber Dropdown/Controls in Header -->
-          <div class="header-timeline-ctrl">
-            <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
+          <!-- Timeline Quick Scrubber & Manual Day Input in Header -->
+          <div class="header-timeline-ctrl" title="Manual Mission Day Selector & Trajectory Scrubber">
+            <button id="tl-prev-day-btn" class="day-step-btn" title="Previous Mission Day" aria-label="Previous Day">-</button>
+            <div class="header-day-input-wrap">
+              <span class="day-prefix">DAY</span>
+              <input type="number" id="header-day-input" min="1" max="180" value="30" class="header-day-input" title="Type any Mission Day (1-180) to jump directly">
+              <span class="day-suffix">/ <span id="header-day-max">180</span></span>
+            </div>
+            <button id="tl-next-day-btn" class="day-step-btn" title="Next Mission Day" aria-label="Next Day">+</button>
             <input type="range" min="1" max="180" value="30" id="tl-slider" class="timeline-slider header-slider" aria-label="180-Day Mission Trajectory Scrubber">
+            <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
           </div>
 
           <!-- Essential Utilities -->
@@ -501,6 +508,10 @@
               <h3>DAILY ASTRONAUT WELLNESS CHECK-IN</h3>
             </div>
             <div class="checkin-header-meta">
+              <div class="checkin-target-day-wrap" title="Manually select which Mission Day to log or inspect">
+                <span class="mu">Target Day:</span>
+                <input type="number" id="checkin-target-day" min="1" max="180" value="30" class="checkin-day-number-input">
+              </div>
               <span class="badge-time">30s ASSESSMENT</span>
               <span class="header-pill status-ok">Auto-Saves to Device</span>
             </div>

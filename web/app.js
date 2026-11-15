@@ -69,15 +69,15 @@ const ALL_METRICS_KEYS = [
 
 // Check-in form fields with clear categories and clean aerospace styling
 const CHECKIN_FIELDS = [
-  { k: "mood",      icon: "", label: "Subjective Mood",      min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "stress",    icon: "", label: "Workload Stress",      min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "fat",       icon: "", label: "Physical Fatigue",     min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "slp",       icon: "", label: "Sleep Rested",         min: 0,  max: 12,  step: 0.5, unit: "h" },
-  { k: "hydration", icon: "", label: "Hydration Intake",     min: 0,  max: 15,  step: 1,   unit: "gl" },
-  { k: "nutrition", icon: "", label: "Nutrition Quality",    min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "headache",  icon: "", label: "Headache / Pressure",  min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "sbp",       icon: "", label: "Systolic BP",          min: 90, max: 180, step: 1,   unit: "mmHg" },
-  { k: "dbp",       icon: "", label: "Diastolic BP",         min: 60, max: 120, step: 1,   unit: "mmHg" },
+  { k: "mood", icon: "", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10" },
+  { k: "stress", icon: "", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10" },
+  { k: "fat", icon: "", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10" },
+  { k: "slp", icon: "", label: "Sleep Rested", min: 0, max: 12, step: 0.5, unit: "h" },
+  { k: "hydration", icon: "", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl" },
+  { k: "nutrition", icon: "", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10" },
+  { k: "headache", icon: "", label: "Headache / Pressure", min: 0, max: 10, step: 1, unit: "/10" },
+  { k: "sbp", icon: "", label: "Systolic BP", min: 90, max: 180, step: 1, unit: "mmHg" },
+  { k: "dbp", icon: "", label: "Diastolic BP", min: 60, max: 120, step: 1, unit: "mmHg" },
 ];
 
 // ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
@@ -939,12 +939,40 @@ function setupTimelineScrubber() {
     });
   }
 
+  function jumpToDay(newDay) {
+    const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
+    const parsed = parseInt(newDay, 10);
+    if (isNaN(parsed)) return;
+    const clamped = Math.max(1, Math.min(totalDays, parsed));
+    T = clamped;
+    render();
+  }
+
+  const dayInput = $("header-day-input");
+  if (dayInput) {
+    dayInput.addEventListener("input", (e) => jumpToDay(e.target.value));
+    dayInput.addEventListener("change", (e) => jumpToDay(e.target.value));
+    dayInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        jumpToDay(e.target.value);
+        dayInput.blur();
+      }
+    });
+  }
+
+  const prevBtn = $("tl-prev-day-btn");
+  if (prevBtn) {
+    prevBtn.onclick = () => jumpToDay(T - 1);
+  }
+
+  const nextBtn = $("tl-next-day-btn");
+  if (nextBtn) {
+    nextBtn.onclick = () => jumpToDay(T + 1);
+  }
+
   const slider = $("tl-slider");
   if (slider) {
-    slider.oninput = (e) => {
-      T = Number(e.target.value);
-      render();
-    };
+    slider.oninput = (e) => jumpToDay(e.target.value);
   }
 
   const playBtn = $("tl-play-btn");
@@ -1062,7 +1090,7 @@ function setupSyncHandlers() {
       }
 
       playChime();
-      if (msg) msg.textContent = serverAck ? `Telemetric downlink complete: ${pending.length} records transferred to Earth.` : `Offline archive complete: ${pending.length} records processed.`;
+      if (msg) msg.textContent = serverAck ? `Transmitted ${pending.length} telemetry records to Earth.` : `Offline archive complete: ${pending.length} records processed.`;
       await renderMissionDataStats();
     } catch (err) {
       if (msg) msg.textContent = `Transmission error: ${err.message}`;
@@ -1157,9 +1185,32 @@ function setupCheckinForm() {
     });
   }
 
+  // Manual Check-in Target Day Selector
+  const checkinTargetDay = $("checkin-target-day");
+  if (checkinTargetDay) {
+    checkinTargetDay.addEventListener("change", (e) => {
+      const val = parseInt(e.target.value, 10);
+      const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
+      if (!isNaN(val) && val >= 1 && val <= totalDays) {
+        T = val;
+        render();
+        CHECKIN_FIELDS.forEach(({ k, unit }) => {
+          const inp = $("ci_" + k);
+          const displayVal = $("val_" + k);
+          if (inp && mission?.series?.[k]) {
+            const dayVal = mission.series[k][val - 1] ?? inp.value;
+            inp.value = dayVal;
+            if (displayVal) displayVal.textContent = `${dayVal} ${unit}`;
+          }
+        });
+      }
+    });
+  }
+
   $("checkin-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const recordedDay = T;
+    const targetInp = $("checkin-target-day");
+    const recordedDay = (targetInp && Number(targetInp.value)) ? Number(targetInp.value) : T;
     const payload = {
       astronaut_id: currentAstronaut.id,
       day: recordedDay,
@@ -1229,7 +1280,7 @@ function setupCheckinForm() {
     playXP();
     const fb = $("checkin-feedback");
     if (fb) {
-      fb.innerHTML = `<strong>Day ${recordedDay} saved.</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
+      fb.innerHTML = `<strong>Day ${recordedDay} saved!</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
       setTimeout(() => (fb.innerHTML = ""), 6000);
     }
 
@@ -1328,9 +1379,30 @@ function render() {
   const a = analyze(ctx, t);
   const o = a.overall;
 
-  // Header Updates
+  // Header & Day Inputs Updates
   const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
   if ($("header-date")) $("header-date").textContent = `Mission Day ${t} of ${totalDays}`;
+
+  const dayInput = $("header-day-input");
+  if (dayInput && Number(dayInput.value) !== t) {
+    dayInput.value = t;
+    dayInput.max = totalDays;
+  }
+  const dayMax = $("header-day-max");
+  if (dayMax) dayMax.textContent = totalDays;
+
+  const slider = $("tl-slider");
+  if (slider && Number(slider.value) !== t) {
+    slider.max = totalDays;
+    slider.value = t;
+  }
+
+  const checkinDayInput = $("checkin-target-day");
+  if (checkinDayInput && Number(checkinDayInput.value) !== t) {
+    checkinDayInput.value = t;
+    checkinDayInput.max = totalDays;
+  }
+
   if ($("header-phase")) {
     const phaseName = a.adapting ? "Microgravity Adaptation" : a.spe ? "Solar Event Active" : t < 60 ? "Outbound Cruise" : t < 120 ? "Deep Space Transit" : "Mars Approach";
     $("header-phase").textContent = phaseName;
@@ -1678,7 +1750,7 @@ async function init() {
 
     // Register Service Worker
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js").catch(() => { });
     }
   } catch (err) {
     console.error("[ASTRA] Application boot error:", err);
