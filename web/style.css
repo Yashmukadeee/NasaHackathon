@@ -125,6 +125,21 @@ h1, h2, h3, h4 {
   gap: 12px;
   cursor: pointer;
 }
+.brand-logo-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(54, 230, 208, 0.4);
+  box-shadow: 0 0 12px rgba(54, 230, 208, 0.25);
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  display: block;
+}
+.brand-item:hover .brand-logo-img {
+  transform: scale(1.06);
+  border-color: var(--cyan);
+  box-shadow: 0 0 18px rgba(54, 230, 208, 0.55);
+}
 .brand-icon {
   width: 36px;
   height: 36px;
