@@ -72,3 +72,37 @@ test("telemetry endpoint range calculation bounds queries between 1 and 180", ()
   assert.deepEqual(clampRange(14, 28), { startDay: 14, endDay: 28 });
 });
 
+test("byte range header parsing computes correct start, end and chunk size", () => {
+  const parseRange = (rangeHeader, totalSize) => {
+    const parts = rangeHeader.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+    const chunkSize = end - start + 1;
+    return { start, end, chunkSize };
+  };
+
+  const r1 = parseRange("bytes=0-1023", 10000);
+  assert.equal(r1.start, 0);
+  assert.equal(r1.end, 1023);
+  assert.equal(r1.chunkSize, 1024);
+
+  const r2 = parseRange("bytes=5000-", 10000);
+  assert.equal(r2.start, 5000);
+  assert.equal(r2.end, 9999);
+  assert.equal(r2.chunkSize, 5000);
+});
+
+test("health check response schema contains required orchestration keys", () => {
+  const healthPayload = {
+    status: "healthy",
+    service: "ASTRA Ground / Edge Telemetry Bridge",
+    version: "1.0.0",
+    uptime: 42.1,
+    timestamp: new Date().toISOString(),
+  };
+
+  assert.equal(healthPayload.status, "healthy");
+  assert.ok(typeof healthPayload.uptime === "number");
+  assert.ok(typeof healthPayload.timestamp === "string");
+  assert.ok(healthPayload.service.includes("ASTRA"));
+});

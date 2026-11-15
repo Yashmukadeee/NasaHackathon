@@ -1,19 +1,21 @@
 // All thresholds and content live here so a flight surgeon can review them
 // without touching code. Values are PLACEHOLDERS, not clinical limits.
 
-// Backend (FastAPI) integration. Everything is overridable via the URL so the
-// same build can point at a demo laptop, a crew tablet or a local mock:
-//   http://localhost:8080/?api=http://127.0.0.1:8000
+// Backend integration. Everything is overridable via the URL so the
+// same build can point at a remote cluster, a crew tablet or a local mock:
+//   https://example.com/?api=https://astra-backend.onrender.com
+// Defaults to relative '/api/v1' on the current host, ensuring seamless hosting.
 // NOTE: a key that reaches the browser is public by definition. Treat
 // FASTAPI_API_KEY as a demo gate, never as a real secret.
 export const BACKEND = (() => {
   const params = typeof location !== "undefined" ? new URLSearchParams(location.search) : new URLSearchParams();
   // Accept either "http://host:8000" or a full ".../api/v1" base.
-  const raw = (params.get("api") || "http://127.0.0.1:8000").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+  const raw = (params.get("api") || "").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+  const base = raw ? `${raw}/api/v1` : "/api/v1";
   return {
-    base: `${raw}/api/v1`,
+    base,
     apiKey: params.get("apikey") || "astra_flight_ops_2026",
-    timeoutMs: 2500,
+    timeoutMs: 3000,
   };
 })();
 

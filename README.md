@@ -5,18 +5,24 @@ An offline health self-monitoring app for astronauts on long missions. It learns
 **No ML model, by design.** There is no real labeled flight data, alerts must be explainable, and the engine must run offline. Detection uses personal baselines, z-scores, EWMA drift, persistence checks and a transparent rules layer.
 
 ## Run it
-Requires Python 3 and Node 18+ (no npm install needed).
+Requires Node 18+ (and optionally Python 3 for the FastAPI backend; no npm install needed).
 ```bash
-npm run data     # regenerate simulated missions (already included)
-npm test         # unit tests
+npm run dev      # run local development server at http://localhost:8080
+npm test         # run unit tests (16 tests)
 npm run eval     # detection latency, sensitivity, false alarms -> docs/evaluation.md
-npm start        # static app + ground bridge at http://localhost:8080
+npm start        # production static app + telemetry bridge at http://localhost:8080
 npm run backend  # optional FastAPI service at http://localhost:8000 (Swagger: /docs)
 ```
 The app works fully without the backend (onboard engine + IndexedDB). Start
 `npm run backend` as well to enable the NASA research CDSS, wearable gateway,
 Supabase sync and ground-team escalation features. Point the app at another API
 with `http://localhost:8080/?api=http://127.0.0.1:8000`.
+
+## Hosting and Deployment
+ASTRA is deployment-ready for cloud hosts and container platforms:
+- **Docker**: `docker compose up -d` for full stack, or `docker build -t astra-web .` for standalone.
+- **Render / Railway / Fly.io / Vercel / Netlify**: Preconfigured with `render.yaml`, `railway.json`, `Procfile`, `fly.toml`, `vercel.json`, and `netlify.toml`.
+- See [DEPLOYMENT.md](file:///c:/Users/Yash/Desktop/NasaHackathon/DEPLOYMENT.md) for full instructions.
 
 ## What you can do in the app
 - Scrub or play through a 180-day mission; jump buttons go to the demo moments.

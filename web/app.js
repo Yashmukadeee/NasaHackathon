@@ -18,7 +18,7 @@
  * - Settings with Multi-Astronaut Switching (ASTRO-1, ASTRO-2, ASTRO-3)
  */
 
-import { CONFIG as C } from "./config.js";
+import { CONFIG as C, BACKEND } from "./config.js";
 import { prepare, analyze, groundSummary, reasonLines, formatValue, LEARNING } from "./engine.js";
 import { playChime, playWarn, playXP, setMuted, isMuted } from "./sound.js";
 import {
@@ -1620,11 +1620,11 @@ function setupCheckinForm() {
       simulated: false,
     });
 
-    // Call FastAPI Assessment & Prediction Endpoint using API key
-    const FASTAPI_KEY = "astra_flight_ops_2026";
+    // Call Assessment & Prediction Endpoint using API key
+    const FASTAPI_KEY = BACKEND.apiKey || "astra_flight_ops_2026";
     let fastApiAnalysis = null;
     try {
-      const resp = await fetch("http://127.0.0.1:8000/api/v1/analysis/assess", {
+      const resp = await fetch(`${BACKEND.base}/analysis/assess`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2196,26 +2196,26 @@ async function init() {
       };
     }
 
-    // FastAPI Backend Health & Status Monitor
-    const FASTAPI_BASE = "http://localhost:8000/api/v1";
+    // Backend Health & Status Monitor
+    const FASTAPI_BASE = BACKEND.base;
     let isFastApiOnline = false;
 
     async function checkFastApiBackend() {
       const pill = $("header-fastapi-pill");
       const label = $("fastapi-status-label");
       try {
-        const res = await fetch(`${FASTAPI_BASE}/status`, { signal: AbortSignal.timeout(2500) });
+        const res = await fetch(`${FASTAPI_BASE}/status`, { signal: AbortSignal.timeout(BACKEND.timeoutMs || 3000) });
         if (res.ok) {
           const data = await res.json();
           isFastApiOnline = true;
           if (pill) { pill.className = "header-pill status-ok"; }
-          if (label) { label.textContent = "FastAPI :8000 Online"; }
+          if (label) { label.textContent = data.service || "Telemetry Online"; }
           return true;
         }
       } catch (e) {
         isFastApiOnline = false;
         if (pill) { pill.className = "header-pill status-delay"; }
-        if (label) { label.textContent = "FastAPI Offline (Local Mode)"; }
+        if (label) { label.textContent = "Telemetry Offline (Local Mode)"; }
       }
       return false;
     }
