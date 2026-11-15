@@ -559,6 +559,9 @@ function renderActionCommands(a) {
   const tierEl = $("overview-action-tier");
   const headlineEl = $("overview-action-headline");
   const listEl = $("overview-commands-list");
+  const focusBanner = $("workstation-focus-banner");
+  const focusTitle = $("focus-banner-title");
+  const focusSub = $("focus-banner-sub");
   if (!box || !a) return;
 
   const o = a.overall;
@@ -568,13 +571,10 @@ function renderActionCommands(a) {
 
   // Box border style by tier
   box.classList.remove("tier-warn", "tier-crit");
-  if (tier >= 2 || ws === 2) box.classList.add("tier-crit");
-  else if (tier === 1 || ws === 1) box.classList.add("tier-warn");
-
-  if (tierEl) tierEl.textContent = `TIER ${tier}`;
 
   // If completely nominal
   if (ws <= 0 && tier === 0) {
+    if (tierEl) tierEl.textContent = "TIER 0";
     if (headlineEl) headlineEl.textContent = "All physiological biometrics within nominal flight baseline.";
     if (listEl) {
       listEl.innerHTML = `
@@ -582,14 +582,49 @@ function renderActionCommands(a) {
         <li><span class="cmd-badge">ROUTINE</span> Log scheduled 30-second daily biometric check-in.</li>
       `;
     }
+    if (focusBanner) focusBanner.style.display = "none";
     return;
   }
 
-  // Active risk detected: build specific actionable commands
+  // Active risk detected: mark tier and focus
+  const isCrit = ws === 2 || tier >= 2;
   const domainName = C.domains[wd] || wd;
-  const headline = ws === 2
-    ? `🚨 HIGH RISK: ${domainName.toUpperCase()} REQUIRES IMMEDIATE CREW COUNTERMEASURES`
-    : `⚠️ WATCH ALERT: ${domainName.toUpperCase()} DEVIATION DETECTED`;
+
+  if (isCrit) {
+    box.classList.add("tier-crit");
+    if (tierEl) tierEl.textContent = `TIER ${tier} CRITICAL`;
+  } else {
+    box.classList.add("tier-warn");
+    if (tierEl) tierEl.textContent = `TIER ${tier} WATCH`;
+  }
+
+  // Update Workstation Focus Banner
+  if (focusBanner) {
+    focusBanner.style.display = "flex";
+    focusBanner.className = `workstation-focus-banner ${isCrit ? "" : "banner-warn"}`;
+    if (focusTitle) {
+      focusTitle.textContent = isCrit
+        ? `🚨 CRITICAL PHYSIOLOGICAL ALERT: ${domainName.toUpperCase()}`
+        : `⚠️ WATCH RISK DETECTED: ${domainName.toUpperCase()}`;
+    }
+    if (focusSub) {
+      focusSub.textContent = isCrit
+        ? "Immediate crew intervention protocol required — Actionable remediation commands prioritized below."
+        : "Autonomous trajectory drift detected — Review preventative countermeasure procedures below.";
+    }
+    const btn = $("btn-scroll-commands");
+    if (btn) {
+      btn.onclick = () => {
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+        box.style.transform = "scale(1.05)";
+        setTimeout(() => (box.style.transform = ""), 600);
+      };
+    }
+  }
+
+  const headline = isCrit
+    ? `🚨 CRITICAL CONTINGENCY: ${domainName.toUpperCase()} PROTOCOL ACTIVATED`
+    : `⚠️ WATCH DIRECTIVE: ${domainName.toUpperCase()} DEVIATION DETECTED`;
   if (headlineEl) headlineEl.textContent = headline;
 
   // Fetch tiered action text from config
@@ -598,15 +633,15 @@ function renderActionCommands(a) {
 
   if (tierActions && tierActions.length) {
     tierActions.forEach((act, idx) => {
-      const badgeType = ws === 2 ? "crit" : "warn";
-      const badgeText = ws === 2 ? `ACTION 0${idx + 1}` : `STEP 0${idx + 1}`;
+      const badgeType = isCrit ? "crit" : "warn";
+      const badgeText = isCrit ? `ACTION 0${idx + 1}` : `STEP 0${idx + 1}`;
       commands.push(`<li><span class="cmd-badge ${badgeType}">${badgeText}</span> ${act}</li>`);
     });
   }
 
   // Multi-domain synergy additions
   if (a.domains.imm?.status >= 1) {
-    commands.push(`<li><span class="cmd-badge ${a.domains.imm.status === 2 ? "crit" : "warn"}">HYDRATION</span> Increase fluid intake (+500 mL) to support renal and lymphatic clearance.</li>`);
+    commands.push(`<li><span class="cmd-badge ${a.domains.imm.status === 2 ? "crit" : "warn"}">HYDRATION</span> Ingest 500 mL electrolyte solution to support renal and lymphatic clearance.</li>`);
   }
   if (a.domains.env?.status >= 1) {
     commands.push(`<li><span class="cmd-badge ${a.domains.env.status === 2 ? "crit" : "warn"}">ECLSS</span> Inspect cabin airflow ventilation ducts and verify regenerative CO₂ scrubber bed status.</li>`);
@@ -939,8 +974,12 @@ function setupTimelineScrubber() {
 function renderTimelineSnapshot(t) {
   const label = $("tl-day-label");
   const slider = $("tl-slider");
-  if (label) label.textContent = `Mission Day ${t} of 180`;
-  if (slider) slider.value = t;
+  const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
+  if (label) label.textContent = `Mission Day ${t} of ${totalDays}`;
+  if (slider) {
+    slider.max = totalDays;
+    slider.value = t;
+  }
 
   const content = $("tl-snapshot-content");
   if (content) {
@@ -1120,9 +1159,10 @@ function setupCheckinForm() {
 
   $("checkin-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const recordedDay = T;
     const payload = {
       astronaut_id: currentAstronaut.id,
-      day: T,
+      day: recordedDay,
       symptoms: Array.from(document.querySelectorAll("#symptoms-chips input:checked")).map((cb) => cb.value),
       notes: $("checkin-notes") ? $("checkin-notes").value : "",
     };
@@ -1132,7 +1172,7 @@ function setupCheckinForm() {
       if (inp) {
         const num = Number(inp.value);
         payload[k] = num;
-        if (mission.series[k]) mission.series[k][T - 1] = num;
+        if (mission.series[k]) mission.series[k][recordedDay - 1] = num;
       }
     });
 
@@ -1140,19 +1180,57 @@ function setupCheckinForm() {
 
     // Save updated telemetry
     const currentVitals = {};
-    for (const k in mission.series) currentVitals[k] = mission.series[k][T - 1];
+    for (const k in mission.series) currentVitals[k] = mission.series[k][recordedDay - 1];
     await saveTelemetry({
       astronaut_id: currentAstronaut.id,
-      day: T,
+      day: recordedDay,
       vitals: currentVitals,
       simulated: true,
     });
 
+    // ── ADVANCE TO NEXT DAY (Add one more day to timeline) ──
+    const nextDay = recordedDay + 1;
+    T = nextDay;
+
+    // Extend series if new day exceeds current length
+    const curLen = mission.series.hr ? mission.series.hr.length : N;
+    if (T > curLen) {
+      for (const k in mission.series) {
+        const lastVal = mission.series[k][curLen - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : 0);
+        mission.series[k].push(lastVal);
+      }
+      mission.days = mission.series.hr.length;
+    }
+
+    const totalDays = Math.max(180, mission.series.hr ? mission.series.hr.length : 180);
+    const slider = $("tl-slider");
+    if (slider) {
+      slider.max = totalDays;
+      slider.value = T;
+    }
+
+    // Refresh checkin inputs for the new day
+    CHECKIN_FIELDS.forEach(({ k, unit }) => {
+      const inp = $("ci_" + k);
+      const val = $("val_" + k);
+      if (inp) {
+        const nextVal = mission.series[k] ? (mission.series[k][T - 1] ?? inp.value) : inp.value;
+        inp.value = nextVal;
+        if (val) val.textContent = `${nextVal} ${unit}`;
+      }
+    });
+
+    // Reset symptoms to Asymptomatic for the new next day
+    document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
+      cb.checked = cb.value === "None";
+    });
+    if ($("checkin-notes")) $("checkin-notes").value = "";
+
     playXP();
     const fb = $("checkin-feedback");
     if (fb) {
-      fb.textContent = `✓ Day ${T} check-in saved to IndexedDB & queued for downlink.`;
-      setTimeout(() => (fb.textContent = ""), 4000);
+      fb.innerHTML = `<strong>✓ Day ${recordedDay} saved!</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
+      setTimeout(() => (fb.innerHTML = ""), 6000);
     }
 
     recompute();
@@ -1251,7 +1329,8 @@ function render() {
   const o = a.overall;
 
   // Header Updates
-  if ($("header-date")) $("header-date").textContent = `Mission Day ${t} of ${N}`;
+  const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
+  if ($("header-date")) $("header-date").textContent = `Mission Day ${t} of ${totalDays}`;
   if ($("header-phase")) {
     const phaseName = a.adapting ? "Microgravity Adaptation" : a.spe ? "Solar Event Active" : t < 60 ? "Outbound Cruise" : t < 120 ? "Deep Space Transit" : "Mars Approach";
     $("header-phase").textContent = phaseName;
