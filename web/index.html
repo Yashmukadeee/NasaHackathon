@@ -183,28 +183,50 @@
 
         <div class="unified-body-readout-grid">
 
-          <!-- Left Flank: Primary Cardiovascular & Metabolic Readouts -->
+          <!-- Left Flank: All Biometric Readouts & Physiological Telemetry -->
           <div class="flank-readouts flank-left">
-            <div class="flank-readout-card">
-              <span class="phys-lbl">HEART RATE</span>
-              <div class="phys-val-row">
-                <strong class="phys-num" id="live-hr-val">62</strong>
-                <span class="phys-unit">BPM</span>
+            <!-- 4 Core Vitals 2x2 Grid -->
+            <div class="flank-vitals-grid">
+              <div class="flank-readout-card">
+                <span class="phys-lbl">HEART RATE</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-hr-val">62</strong>
+                  <span class="phys-unit">BPM</span>
+                </div>
+                <span class="phys-status ok" id="live-hr-status">● NOMINAL</span>
               </div>
-              <span class="phys-status ok" id="live-hr-status">● NOMINAL</span>
+
+              <div class="flank-readout-card">
+                <span class="phys-lbl">BLOOD OXYGEN</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-spo2-val">98.2</strong>
+                  <span class="phys-unit">%</span>
+                </div>
+                <span class="phys-status ok" id="live-spo2-status">● OPTIMAL</span>
+              </div>
+
+              <div class="flank-readout-card">
+                <span class="phys-lbl">BLOOD PRESSURE</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-bp-val">118/76</strong>
+                  <span class="phys-unit">mmHg</span>
+                </div>
+                <span class="phys-status ok" id="live-bp-status">● NORMOTENSIVE</span>
+              </div>
+
+              <div class="flank-readout-card">
+                <span class="phys-lbl">CORE TEMP</span>
+                <div class="phys-val-row">
+                  <strong class="phys-num" id="live-temp-val">36.6</strong>
+                  <span class="phys-unit">°C</span>
+                </div>
+                <span class="phys-status ok" id="live-temp-status">● AFEBRILE</span>
+              </div>
             </div>
 
+            <!-- Heart Rate Variability -->
             <div class="flank-readout-card">
-              <span class="phys-lbl">BLOOD OXYGEN (SPO2)</span>
-              <div class="phys-val-row">
-                <strong class="phys-num" id="live-spo2-val">98.2</strong>
-                <span class="phys-unit">%</span>
-              </div>
-              <span class="phys-status ok" id="live-spo2-status">● OPTIMAL</span>
-            </div>
-
-            <div class="flank-readout-card">
-              <span class="phys-lbl">HEART RATE VARIABILITY</span>
+              <span class="phys-lbl">HEART RATE VARIABILITY (HRV)</span>
               <div class="phys-val-row">
                 <strong class="phys-num" id="live-hrv-val">58</strong>
                 <span class="phys-unit">ms</span>
@@ -218,7 +240,15 @@
                 <span class="ecg-title">ECG / LEAD II MONITOR</span>
                 <span class="ecg-speed">25 mm/s</span>
               </div>
-              <canvas id="ecg-canvas" width="280" height="76" class="ecg-canvas"></canvas>
+              <canvas id="ecg-canvas" width="310" height="74" class="ecg-canvas"></canvas>
+            </div>
+
+            <!-- Active Concerns Card -->
+            <div class="concerns-card" id="overview-concerns-card">
+              <h4>ACTIVE RISK FACTORS</h4>
+              <div id="overview-concerns-list" class="concerns-list">
+                <span class="mu">No clinical alerts active. Physiological vitals stable.</span>
+              </div>
             </div>
           </div>
 
@@ -328,46 +358,30 @@
             </div>
           </div>
 
-          <!-- Right Flank: Pressure, Temp, Remediation Directives & Concerns -->
-          <div class="flank-readouts flank-right">
-            <div class="flank-readout-card">
-              <span class="phys-lbl">BLOOD PRESSURE</span>
-              <div class="phys-val-row">
-                <strong class="phys-num" id="live-bp-val">118/76</strong>
-                <span class="phys-unit">mmHg</span>
-              </div>
-              <span class="phys-status ok" id="live-bp-status">● NORMOTENSIVE</span>
-            </div>
-
-            <div class="flank-readout-card">
-              <span class="phys-lbl">CORE TEMPERATURE</span>
-              <div class="phys-val-row">
-                <strong class="phys-num" id="live-temp-val">36.6</strong>
-                <span class="phys-unit">°C</span>
-              </div>
-              <span class="phys-status ok" id="live-temp-status">● AFEBRILE</span>
-            </div>
-
-            <!-- Astronaut Remediation Commands -->
-            <div class="action-recommendation-box" id="overview-action-box">
+          <!-- Right Flank: Entirely Dedicated to Astronaut Remediation Commands -->
+          <div class="flank-readouts flank-right dedicated-commands-flank">
+            <div class="action-recommendation-box full-height-command-console" id="overview-action-box">
               <div class="action-header">
-                <span class="action-tag">ASTRONAUT REMEDIATION COMMANDS</span>
+                <div class="action-title-wrap">
+                  <span class="action-tag">ASTRONAUT OPERATIONAL DIRECTIVE</span>
+                  <h4 class="action-subhead">Autonomous Remediation Console</h4>
+                </div>
                 <span class="action-tier" id="overview-action-tier">TIER 0</span>
               </div>
               <div class="directive-headline" id="overview-action-headline">All biometrics within nominal flight baseline.</div>
               <div class="directive-commands-container" id="overview-commands-container">
+                <span class="directive-section-label">ACTION PROTOCOL INSTRUCTIONS:</span>
                 <ul class="directive-commands-list" id="overview-commands-list">
                   <li><span class="cmd-badge">STABLE</span> Maintain standard resistive exercise and sleep wind-down routine.</li>
                   <li><span class="cmd-badge">ROUTINE</span> Log scheduled daily biometric check-in.</li>
                 </ul>
               </div>
-            </div>
-
-            <!-- Active Concerns Card -->
-            <div class="concerns-card" id="overview-concerns-card">
-              <h4>ACTIVE RISK FACTORS</h4>
-              <div id="overview-concerns-list" class="concerns-list">
-                <span class="mu">No clinical alerts active. Physiological vitals stable.</span>
+              <div class="action-console-footer">
+                <div class="action-footer-status">
+                  <span class="pulse-dot"></span>
+                  <span>AUTONOMOUS CDSS ENGAGED</span>
+                </div>
+                <button type="button" class="btn-direct-transmit" id="btn-commands-escalate">TRANSMIT GROUND DOWNLINK</button>
               </div>
             </div>
           </div>

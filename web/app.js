@@ -654,7 +654,7 @@ function renderActionCommands(a) {
   }
 
   if (listEl) {
-    listEl.innerHTML = commands.slice(0, 4).join("");
+    listEl.innerHTML = commands.slice(0, 6).join("");
   }
 }
 
@@ -1589,6 +1589,10 @@ async function init() {
     }
 
     $("quick-escalate-btn")?.addEventListener("click", () => {
+      showEmergencyModal(T);
+    });
+
+    $("btn-commands-escalate")?.addEventListener("click", () => {
       showEmergencyModal(T);
     });
 
