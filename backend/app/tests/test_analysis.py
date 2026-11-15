@@ -57,3 +57,53 @@ def test_infection_pattern_synergy():
     assert res["domains"]["imm"]["status"] == 2
     assert res["domains"]["imm"]["rule"] == "infection"
     assert res["overall"]["tier"] >= 2
+
+
+def test_fastapi_assess_endpoint_authentication_and_prediction():
+    from starlette.testclient import TestClient
+    from app.main import app
+
+    client = TestClient(app)
+
+    # 1. Reject without key
+    unauth_resp = client.post("/api/v1/analysis/assess", json={
+        "astronaut_id": "ASTRO-1",
+        "mission_day": 45,
+        "vitals": {"hr": 70, "temp": 36.6}
+    })
+    assert unauth_resp.status_code == 401
+
+    # 2. Accept with valid X-API-Key header and predict astronaut commands
+    auth_resp = client.post(
+        "/api/v1/analysis/assess",
+        headers={"X-API-Key": "astra_flight_ops_2026"},
+        json={
+            "astronaut_id": "ASTRO-1",
+            "mission_day": 45,
+            "vitals": {
+                "fat": 8.5,
+                "stress": 8.0,
+                "slp": 4.2,
+                "sbp": 138,
+                "dbp": 92,
+                "temp": 37.8,
+                "headache": 6.0
+            },
+            "symptoms": ["Headache / ICP Elevation", "Cognitive Slowing / Brain Fog"],
+            "notes": "Severe orbital headache, high fatigue post EVA"
+        }
+    )
+    assert auth_resp.status_code == 200
+    data = auth_resp.json()
+    assert data["status"] in ("Normal", "Watch", "Act")
+    assert "tier" in data
+    assert len(data["predicted_commands"]) > 0
+    assert "evidence_citations" in data
+    assert len(data["evidence_citations"]) > 0
+
+    first_cmd = data["predicted_commands"][0]
+    assert "priority" in first_cmd
+    assert "command" in first_cmd
+    assert "rationale" in first_cmd
+    assert "NASA HRP" in first_cmd["rationale"] or "Microgravity" in first_cmd["rationale"]
+

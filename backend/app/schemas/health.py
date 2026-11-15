@@ -69,3 +69,41 @@ class RadiationAnalysisResponse(BaseModel):
     trend: str
     csa_context: str
     prototype_disclaimer: str
+
+
+class AssessmentRequest(BaseModel):
+    astronaut_id: str = Field(..., description="Unique astronaut ID (e.g. ASTRO-1)")
+    mission_day: int = Field(..., ge=1, le=1000, description="Mission day (1-indexed)")
+    vitals: dict[str, Optional[float]] = Field(default_factory=dict, description="17 vitals and telemetry parameters")
+    symptoms: list[str] = Field(default_factory=list, description="Reported clinical symptoms")
+    notes: Optional[str] = Field("", description="Operational crew notes")
+    api_key: Optional[str] = Field(None, description="FastAPI authentication key")
+
+
+class PredictedCommand(BaseModel):
+    priority: str  # "CRITICAL", "URGENT", "WATCH", "ROUTINE"
+    domain: str  # "car", "imm", "neu", "msk", "env", "rad"
+    title: str
+    command: str
+    rationale: str
+    evidence_source: Optional[str] = None
+    hazard: Optional[str] = None
+
+
+class AssessmentResponse(BaseModel):
+    astronaut_id: str
+    mission_day: int
+    tier: int
+    tier_label: str
+    status: str
+    worst_domain: str
+    worst_domain_name: str
+    hazard: str
+    domains: dict[str, Any]
+    deviations: list[dict[str, Any]]
+    predicted_commands: list[PredictedCommand]
+    evidence_citations: list[dict[str, Any]]
+    trajectories_7d: dict[str, Any]
+    ground_summary: str
+    timestamp: str
+    prototype_disclaimer: str

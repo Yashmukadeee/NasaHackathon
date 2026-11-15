@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     EMAIL_GATEWAY_URL: str = ""
     EMAIL_GATEWAY_API_KEY: str = ""
 
+    # Security & API Authentication Key
+    FASTAPI_API_KEY: str = "astra_flight_ops_2026"
+
     # Operational Parameters
     REQUEST_TIMEOUT_SECONDS: int = 30
     RESEARCH_REFRESH_INTERVAL_HOURS: int = 24

@@ -63,37 +63,51 @@
 
     <header class="app-header">
       <div class="header-inner">
-        <div class="header-left">
-          <div class="brand-item" title="ASTRA">
-            <img src="logo.jpg" alt="ASTRA Mission Logo" class="brand-logo-img">
+        <div class="header-main">
+          <div class="header-left">
+            <div class="brand-item" title="ASTRA">
+              <img src="logo.jpg" alt="ASTRA Mission Logo" class="brand-logo-img">
+            </div>
+
+            <!-- Core Tabs (Option A - Clean Aerospace Segmented Nav) -->
+            <nav class="top-nav" aria-label="Main Navigation">
+              <button class="nav-item active" data-tab="tab-overview">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="10" r="2.2"/><path d="M7 17.5c1.2-1.8 3-2.5 5-2.5s3.8.7 5 2.5"/></svg>
+                <span class="nav-label">Overview &amp; Digital Twin</span>
+              </button>
+              <button class="nav-item" data-tab="tab-monitoring">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-7 4 14 2.5-7H21"/></svg>
+                <span class="nav-label">Telemetry Matrix</span>
+              </button>
+              <button class="nav-item" data-tab="tab-checkin">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="M9 13.5l2 2 4-4.5"/></svg>
+                <span class="nav-label">Daily Check-in</span>
+              </button>
+              <button class="nav-item" data-tab="tab-wearables">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="3"/><path d="M9.5 7 10 3h4l.5 4M9.5 17 10 21h4l.5-4"/><path d="M12 10v2.2l1.5 1"/></svg>
+                <span class="nav-label">Wearable Gateway</span>
+              </button>
+              <button class="nav-item" data-tab="tab-data">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-7"/><circle cx="12" cy="10" r="2"/><path d="M8 7.5a5.5 5.5 0 0 0 0 5M16 7.5a5.5 5.5 0 0 1 0 5M5.5 5a9.5 9.5 0 0 0 0 9.5M18.5 5a9.5 9.5 0 0 1 0 9.5"/></svg>
+                <span class="nav-label">Ground Transmission</span>
+              </button>
+            </nav>
           </div>
 
-          <!-- Core 4 Tabs (Option A - Clean Aerospace Segmented Nav) -->
-          <nav class="top-nav" aria-label="Main Navigation">
-            <button class="nav-item active" data-tab="tab-overview">
-              <span class="nav-label">Overview &amp; Digital Twin</span>
-            </button>
-            <button class="nav-item" data-tab="tab-monitoring">
-              <span class="nav-label">Telemetry Matrix</span>
-            </button>
-            <button class="nav-item" data-tab="tab-checkin">
-              <span class="nav-label">Daily Check-in</span>
-            </button>
-            <button class="nav-item" data-tab="tab-wearables">
-              <span class="nav-label">Wearable Gateway</span>
-            </button>
-            <button class="nav-item" data-tab="tab-data">
-              <span class="nav-label">Ground Transmission</span>
-            </button>
-          </nav>
+          <!-- Essential Utilities -->
+          <div class="header-actions">
+            <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">GROUND ALERT</button>
+            <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">CREW</button>
+            <button id="mute-toggle-btn" class="header-action-btn" title="Toggle Audio Alarms">AUDIO</button>
+          </div>
         </div>
 
-        <div class="header-right">
+        <!-- Mission Timeline & Link Status Strip -->
+        <div class="header-strip">
           <div class="header-meta-text">
             <span id="header-phase">Outbound Cruise</span>
           </div>
 
-          <!-- Timeline Quick Scrubber & Manual Day Input in Header -->
           <div class="header-timeline-ctrl" title="Manual Mission Day Selector & Trajectory Scrubber">
             <div class="header-day-input-wrap">
               <span class="day-prefix">DAY</span>
@@ -103,18 +117,14 @@
             <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
           </div>
 
-        <div class="header-pill status-ok" id="header-supabase-pill" title="Cloud Database Link">
-          <span class="pill-dot"></span>
-        </div>
-
-        <div class="header-pill status-ok" id="header-wearable-pill" title="Wearable Hardware Link">
-          <span class="pill-dot"></span>
-        </div>
-
-        <!-- Essential Utilities -->
-        <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">GROUND ALERT</button>
-        <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">CREW</button>
-        <button id="mute-toggle-btn" class="header-action-btn" title="Toggle Audio Alarms">AUDIO</button>
+          <div class="header-status">
+            <div class="header-pill status-ok" id="header-supabase-pill" title="Cloud Database Link">
+              <span class="pill-dot"></span>
+            </div>
+            <div class="header-pill status-ok" id="header-wearable-pill" title="Wearable Hardware Link">
+              <span class="pill-dot"></span>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -528,7 +538,7 @@
               <span class="pulse-dot" id="checkin-mode-pulse"></span>
               <div>
                 <strong id="checkin-mode-title">LOGGING MISSION DAY 30</strong>
-                <span id="checkin-mode-desc">Reviewing recorded flight biometrics. Modify any parameter to update flight records and recompute clinical intelligence.</span>
+                <span id="checkin-mode-desc">Reviewing recorded flight biometrics. Modify manual parameters below to update flight records and trigger FastAPI CDSS intelligence.</span>
               </div>
             </div>
             <div class="mode-banner-right" id="checkin-mode-action-wrap">
@@ -536,12 +546,45 @@
             </div>
           </div>
 
-          <!-- Category Filter Bar -->
+          <!-- Continuous Automated Biosensors & ECLSS Habitat Telemetry Strip (Readonly) -->
+          <div class="checkin-stream-strip">
+            <div class="stream-strip-header">
+              <span class="stream-badge"><span class="pulse-dot"></span> CONTINUOUS BIOSENSORS &amp; ECLSS TELEMETRY (STREAMED AUTOMATICALLY)</span>
+              <span class="stream-sub">Streaming for Day <strong id="ci-stream-day">30</strong> — Not manually entered</span>
+            </div>
+            <div class="stream-pills-row">
+              <div class="stream-pill" title="Continuous optical pulse oximeter / ECG chest strap">
+                <span class="pill-k">❤️ Heart Rate</span>
+                <strong id="ci-stream-hr">62 bpm</strong>
+              </div>
+              <div class="stream-pill" title="Real-time R-R interval heart rate variability">
+                <span class="pill-k">💓 HRV</span>
+                <strong id="ci-stream-hrv">65 ms</strong>
+              </div>
+              <div class="stream-pill" title="Pulse oximeter arterial oxygenation">
+                <span class="pill-k">🫁 SpO2</span>
+                <strong id="ci-stream-spo2">98.2%</strong>
+              </div>
+              <div class="stream-pill" title="Tympanic/skin core body thermoregulation">
+                <span class="pill-k">🌡️ Core Temp</span>
+                <strong id="ci-stream-temp">36.6 °C</strong>
+              </div>
+              <div class="stream-pill" title="ECLSS cabin air partial pressure of carbon dioxide">
+                <span class="pill-k">💨 Cabin CO2</span>
+                <strong id="ci-stream-co2">2.1 mmHg</strong>
+              </div>
+              <div class="stream-pill" title="CSA EVARM / active silicon dosimeter">
+                <span class="pill-k">☢️ Radiation Dose</span>
+                <strong id="ci-stream-dose">0.35 mSv</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Filter Bar (Manual Inputs Only) -->
           <div class="checkin-category-bar">
-            <button type="button" class="cat-pill active" data-cat="all">All 17 Parameters</button>
+            <button type="button" class="cat-pill active" data-cat="all">All Manual Inputs (11)</button>
             <button type="button" class="cat-pill" data-cat="subjective">Subjective &amp; Cognitive (7)</button>
-            <button type="button" class="cat-pill" data-cat="vitals">Cardiovascular &amp; Vitals (6)</button>
-            <button type="button" class="cat-pill" data-cat="environment">Performance &amp; Habitat (4)</button>
+            <button type="button" class="cat-pill" data-cat="physical">Vitals Cuff &amp; Exercise (4)</button>
           </div>
 
           <!-- Quick 1-Click Preset Bar -->
@@ -550,8 +593,8 @@
             <button type="button" class="preset-btn" id="preset-nominal">Nominal Baseline</button>
             <button type="button" class="preset-btn" id="preset-fatigued">Post-EVA Fatigue</button>
             <button type="button" class="preset-btn" id="preset-stress">High Workload</button>
-            <button type="button" class="preset-btn" id="preset-fever">Fever &amp; Infection</button>
-            <button type="button" class="preset-btn" id="preset-co2">Elevated CO2</button>
+            <button type="button" class="preset-btn" id="preset-fever">Symptomatic Malaise</button>
+            <button type="button" class="preset-btn" id="preset-co2">Cephalad / SANS Pressure</button>
           </div>
 
           <form id="checkin-form" class="checkin-form">
@@ -611,6 +654,15 @@
                 <span class="deviations-box-sub" id="res-deviations-count">0 Anomalies Detected</span>
               </div>
               <div class="deviations-pills-list" id="res-deviations-list"></div>
+            </div>
+
+            <!-- NASA / CSA Research Citations & Evidence Attribution -->
+            <div class="results-citations-box" id="res-citations-box">
+              <div class="citations-box-header">
+                <span class="citations-box-title">NASA HUMAN RESEARCH PROGRAM (HRP) &amp; CSA EVIDENCE BASE</span>
+                <span class="citations-box-sub">Peer-Reviewed Spaceflight Clinical Attributions</span>
+              </div>
+              <div class="citations-list" id="res-citations-list"></div>
             </div>
 
             <!-- Actionable Directives & Commands to the Astronaut -->

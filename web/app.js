@@ -68,30 +68,23 @@ const ALL_METRICS_KEYS = [
   "headache", "co2", "dose"
 ];
 
-// Check-in form fields covering all 17 clinical, subjective & environmental parameters
+// Check-in form fields covering ONLY manually inputted astronaut parameters
+// (Automated sensors: HR, HRV, SpO2, Core Temp, Cabin CO2, Dosimeter are streamed via ASTRA Device Gateway)
 const CHECKIN_FIELDS = [
   // Subjective & Cognitive Wellness (7 metrics)
-  { k: "mood", cat: "subjective", icon: "🧠", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10", desc: "Mental affect & cognitive morale" },
-  { k: "stress", cat: "subjective", icon: "⚡", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived cognitive workload" },
-  { k: "fat", cat: "subjective", icon: "🔋", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10", desc: "Neuromuscular exhaustion" },
+  { k: "mood", cat: "subjective", icon: "🧠", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10", desc: "Self-assessed cognitive affect & morale" },
+  { k: "stress", cat: "subjective", icon: "⚡", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived cognitive & mission workload" },
+  { k: "fat", cat: "subjective", icon: "🔋", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived neuromuscular exhaustion" },
   { k: "slp", cat: "subjective", icon: "🌙", label: "Sleep Duration", min: 0, max: 12, step: 0.5, unit: "h", desc: "Restorative sleep logged" },
-  { k: "headache", cat: "subjective", icon: "🤕", label: "Headache / ICP", min: 0, max: 10, step: 1, unit: "/10", desc: "Cranial pressure & fluid shift" },
-  { k: "hydration", cat: "subjective", icon: "💧", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl", desc: "Electrolyte packs logged" },
-  { k: "nutrition", cat: "subjective", icon: "🥗", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10", desc: "Caloric & dietary compliance" },
+  { k: "headache", cat: "subjective", icon: "🤕", label: "Headache / ICP", min: 0, max: 10, step: 1, unit: "/10", desc: "Cephalad fluid shift & cranial pressure" },
+  { k: "hydration", cat: "subjective", icon: "💧", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl", desc: "Electrolyte fluid packs consumed" },
+  { k: "nutrition", cat: "subjective", icon: "🥗", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10", desc: "Caloric intake & dietary adherence" },
 
-  // Cardiovascular & Clinical Vitals (6 metrics)
-  { k: "hr", cat: "vitals", icon: "❤️", label: "Resting Heart Rate", min: 40, max: 180, step: 1, unit: "bpm", desc: "Basal cardiovascular pulse" },
-  { k: "hrv", cat: "vitals", icon: "💓", label: "Heart Rate Var (HRV)", min: 10, max: 160, step: 1, unit: "ms", desc: "Autonomic recovery tone" },
-  { k: "spo2", cat: "vitals", icon: "🫁", label: "Blood Oxygen SpO2", min: 80, max: 100, step: 0.5, unit: "%", desc: "Arterial oxygen saturation" },
-  { k: "sbp", cat: "vitals", icon: "🩸", label: "Systolic Blood Pressure", min: 80, max: 200, step: 1, unit: "mmHg", desc: "Peak systolic arterial pressure" },
-  { k: "dbp", cat: "vitals", icon: "🩺", label: "Diastolic Blood Pressure", min: 50, max: 130, step: 1, unit: "mmHg", desc: "Minimum resting diastolic pressure" },
-  { k: "temp", cat: "vitals", icon: "🌡️", label: "Core Body Temperature", min: 35.0, max: 41.0, step: 0.1, unit: "°C", desc: "Tympanic core thermoregulation" },
-
-  // Physical Performance & Habitat Environment (4 metrics)
-  { k: "ex", cat: "environment", icon: "🏋️", label: "Resistive Exercise (ARED)", min: 0, max: 180, step: 5, unit: "min", desc: "Musculoskeletal loading duration" },
-  { k: "grip", cat: "environment", icon: "✊", label: "Grip Dynamometry", min: 10, max: 80, step: 1, unit: "kg", desc: "Isometric forearm muscular strength" },
-  { k: "co2", cat: "environment", icon: "💨", label: "Cabin CO2 Partial Press", min: 0.5, max: 10.0, step: 0.1, unit: "mmHg", desc: "Habitat partial pressure of CO2" },
-  { k: "dose", cat: "environment", icon: "☢️", label: "Daily Radiation Dosimeter", min: 0.0, max: 25.0, step: 0.1, unit: "mSv", desc: "Active dosimeter rate per 24h" },
+  // Manual Vitals Cuff & Physical Countermeasures (4 metrics)
+  { k: "sbp", cat: "physical", icon: "🩸", label: "Systolic Blood Pressure", min: 80, max: 200, step: 1, unit: "mmHg", desc: "Manual cuff arterial measurement" },
+  { k: "dbp", cat: "physical", icon: "🩺", label: "Diastolic Blood Pressure", min: 50, max: 130, step: 1, unit: "mmHg", desc: "Manual cuff resting measurement" },
+  { k: "ex", cat: "physical", icon: "🏋️", label: "Resistive Exercise (ARED)", min: 0, max: 180, step: 5, unit: "min", desc: "Daily ARED / cycle workout duration" },
+  { k: "grip", cat: "physical", icon: "✊", label: "Grip Dynamometry", min: 10, max: 80, step: 1, unit: "kg", desc: "Physical hand dynamometer test score" },
 ];
 
 // ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
@@ -1212,7 +1205,26 @@ function setupCheckinForm() {
       }
     }
 
-    // Populate Fields with Data for this Day
+    // Populate Continuous Automated Biosensors Readout Strip (Readonly)
+    const streamDay = $("ci-stream-day");
+    if (streamDay) streamDay.textContent = boundedDay;
+    const dayIdx = isNewDay ? Math.min(boundedDay - 2, curLen - 1) : boundedDay - 1;
+
+    const hrVal = mission?.series?.hr ? (mission.series.hr[dayIdx] ?? 62) : 62;
+    const hrvVal = mission?.series?.hrv ? (mission.series.hrv[dayIdx] ?? 65) : 65;
+    const spo2Val = mission?.series?.spo2 ? (mission.series.spo2[dayIdx] ?? 98.2) : 98.2;
+    const tempVal = mission?.series?.temp ? (mission.series.temp[dayIdx] ?? 36.6) : 36.6;
+    const co2Val = mission?.series?.co2 ? (mission.series.co2[dayIdx] ?? 2.1) : 2.1;
+    const doseVal = mission?.series?.dose ? (mission.series.dose[dayIdx] ?? 0.35) : 0.35;
+
+    if ($("ci-stream-hr")) $("ci-stream-hr").textContent = `${Math.round(hrVal)} bpm`;
+    if ($("ci-stream-hrv")) $("ci-stream-hrv").textContent = `${Math.round(hrvVal)} ms`;
+    if ($("ci-stream-spo2")) $("ci-stream-spo2").textContent = `${(+spo2Val).toFixed(1)}%`;
+    if ($("ci-stream-temp")) $("ci-stream-temp").textContent = `${(+tempVal).toFixed(1)} °C`;
+    if ($("ci-stream-co2")) $("ci-stream-co2").textContent = `${(+co2Val).toFixed(1)} mmHg`;
+    if ($("ci-stream-dose")) $("ci-stream-dose").textContent = `${(+doseVal).toFixed(2)} mSv`;
+
+    // Populate Manual Fields with Data for this Day
     CHECKIN_FIELDS.forEach(({ k, unit, min }) => {
       const inp = $("ci_" + k);
       const valBadge = $("val_" + k);
@@ -1295,7 +1307,7 @@ function setupCheckinForm() {
     }
   });
 
-  // 6. Quick Biometric Preset Handlers
+  // 6. Quick Biometric Preset Handlers (Only Manual Parameters)
   function applyCheckinPreset(vals, symptomsList, presetName) {
     for (const k in vals) {
       const inp = $("ci_" + k);
@@ -1318,45 +1330,40 @@ function setupCheckinForm() {
 
   $("preset-nominal")?.addEventListener("click", () => {
     applyCheckinPreset({
-      mood: 8, stress: 2, fat: 2, slp: 8.0, hydration: 10, nutrition: 8, headache: 0,
-      hr: 62, hrv: 65, spo2: 98.2, sbp: 118, dbp: 76, temp: 36.6,
-      ex: 60, grip: 45, co2: 2.1, dose: 0.35,
+      mood: 8, stress: 2, fat: 2, slp: 8.0, headache: 0, hydration: 10, nutrition: 8,
+      sbp: 118, dbp: 76, ex: 60, grip: 45,
     }, ["None"], "Nominal Baseline");
   });
 
   $("preset-fatigued")?.addEventListener("click", () => {
     applyCheckinPreset({
-      mood: 6, stress: 5, fat: 8, slp: 5.5, hydration: 6, nutrition: 6, headache: 3,
-      hr: 76, hrv: 35, spo2: 97.0, sbp: 126, dbp: 82, temp: 36.9,
-      ex: 90, grip: 38, co2: 2.4, dose: 0.42,
+      mood: 6, stress: 5, fat: 8, slp: 5.5, headache: 3, hydration: 6, nutrition: 6,
+      sbp: 126, dbp: 82, ex: 90, grip: 38,
     }, ["Fatigue", "BackPain"], "Post-EVA Fatigue");
   });
 
   $("preset-stress")?.addEventListener("click", () => {
     applyCheckinPreset({
-      mood: 4, stress: 8, fat: 7, slp: 4.5, hydration: 5, nutrition: 5, headache: 6,
-      hr: 86, hrv: 28, spo2: 97.5, sbp: 136, dbp: 88, temp: 36.8,
-      ex: 25, grip: 40, co2: 2.5, dose: 0.36,
+      mood: 4, stress: 8, fat: 7, slp: 4.5, headache: 6, hydration: 5, nutrition: 5,
+      sbp: 136, dbp: 88, ex: 25, grip: 40,
     }, ["Headache", "Fatigue"], "High Workload & Stress");
   });
 
   $("preset-fever")?.addEventListener("click", () => {
     applyCheckinPreset({
-      mood: 3, stress: 6, fat: 9, slp: 5.0, hydration: 5, nutrition: 4, headache: 7,
-      hr: 96, hrv: 22, spo2: 95.5, sbp: 128, dbp: 84, temp: 38.4,
-      ex: 0, grip: 32, co2: 2.2, dose: 0.35,
-    }, ["Fatigue", "Headache", "Nausea"], "Fever & Infection Contingency");
+      mood: 3, stress: 6, fat: 9, slp: 5.0, headache: 7, hydration: 5, nutrition: 4,
+      sbp: 128, dbp: 84, ex: 0, grip: 32,
+    }, ["Fatigue", "Headache", "Nausea"], "Symptomatic Malaise");
   });
 
   $("preset-co2")?.addEventListener("click", () => {
     applyCheckinPreset({
-      mood: 4, stress: 6, fat: 6, slp: 5.5, hydration: 8, nutrition: 7, headache: 8,
-      hr: 82, hrv: 40, spo2: 96.0, sbp: 132, dbp: 86, temp: 36.7,
-      ex: 45, grip: 42, co2: 5.2, dose: 0.38,
-    }, ["Headache", "EyeIrritation"], "Elevated Cabin CO2 Scenario");
+      mood: 4, stress: 6, fat: 6, slp: 5.5, headache: 8, hydration: 8, nutrition: 7,
+      sbp: 138, dbp: 88, ex: 45, grip: 42,
+    }, ["Headache", "EyeIrritation"], "Cephalad / SANS Pressure");
   });
 
-  // 7. Form Submit & Real-Time CDSS Analysis Execution
+  // 7. Form Submit & Real-Time FastAPI CDSS Analysis Execution
   $("checkin-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const targetInp = $("checkin-target-day");
@@ -1369,7 +1376,7 @@ function setupCheckinForm() {
       notes: $("checkin-notes") ? $("checkin-notes").value : "",
     };
 
-    // Extract all 17 fields
+    // Extract all manual fields
     CHECKIN_FIELDS.forEach(({ k }) => {
       const inp = $("ci_" + k);
       if (inp) {
@@ -1377,9 +1384,19 @@ function setupCheckinForm() {
       }
     });
 
-    // Determine if adding a new day or modifying an existing date
     const curLen = mission?.series?.hr ? mission.series.hr.length : N;
     const isNewDay = recordedDay > curLen;
+
+    // Merge manual entries with continuous automated biosensor streams
+    const currentVitals = {};
+    for (const k of ALL_METRICS_KEYS) {
+      if (payload[k] != null) {
+        currentVitals[k] = payload[k];
+      } else {
+        const dayIdx = isNewDay ? Math.min(recordedDay - 2, curLen - 1) : recordedDay - 1;
+        currentVitals[k] = mission?.series?.[k] ? (mission.series[k][dayIdx] ?? ctx.base[k]?.mean ?? 0) : 0;
+      }
+    }
 
     if (isNewDay) {
       // Extend series arrays up to recordedDay
@@ -1387,7 +1404,7 @@ function setupCheckinForm() {
         for (const k of ALL_METRICS_KEYS) {
           if (!mission.series[k]) mission.series[k] = [];
           const valToPut = (d === recordedDay)
-            ? (payload[k] ?? mission.series[k][d - 2] ?? ctx.base[k]?.mean ?? 0)
+            ? currentVitals[k]
             : (mission.series[k][d - 2] ?? ctx.base[k]?.mean ?? 0);
           mission.series[k].push(valToPut);
         }
@@ -1396,17 +1413,14 @@ function setupCheckinForm() {
     } else {
       // Update existing day in-place
       for (const k of ALL_METRICS_KEYS) {
-        if (mission.series[k] && payload[k] != null) {
-          mission.series[k][recordedDay - 1] = payload[k];
+        if (mission.series[k] && currentVitals[k] != null) {
+          mission.series[k][recordedDay - 1] = currentVitals[k];
         }
       }
     }
 
     // Save Check-in and Telemetry to IndexedDB
-    await saveCheckIn(payload);
-
-    const currentVitals = {};
-    for (const k of ALL_METRICS_KEYS) currentVitals[k] = payload[k];
+    await saveCheckIn({ ...payload, ...currentVitals });
     await saveTelemetry({
       astronaut_id: currentAstronaut.id,
       day: recordedDay,
@@ -1414,19 +1428,31 @@ function setupCheckinForm() {
       simulated: false,
     });
 
-    // Background sync with FastAPI Backend
-    fetch("http://127.0.0.1:8000/api/v1/telemetry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        astronaut_id: currentAstronaut.id,
-        mission_day: recordedDay,
-        source: "checkin_entry",
-        ...currentVitals,
-      }),
-    }).catch(() => {
-      // Offline-first architecture queues sync automatically via IndexedDB
-    });
+    // Call FastAPI Assessment & Prediction Endpoint using API key
+    const FASTAPI_KEY = "astra_flight_ops_2026";
+    let fastApiAnalysis = null;
+    try {
+      const resp = await fetch("http://127.0.0.1:8000/api/v1/analysis/assess", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": FASTAPI_KEY,
+        },
+        body: JSON.stringify({
+          astronaut_id: currentAstronaut.id,
+          mission_day: recordedDay,
+          vitals: currentVitals,
+          symptoms: payload.symptoms,
+          notes: payload.notes,
+          api_key: FASTAPI_KEY,
+        }),
+      });
+      if (resp.ok) {
+        fastApiAnalysis = await resp.json();
+      }
+    } catch (err) {
+      console.warn("[ASTRA] FastAPI offline, using onboard local CDSS engine:", err);
+    }
 
     // Update Application Global Timeline Day
     T = recordedDay;
@@ -1448,11 +1474,12 @@ function setupCheckinForm() {
     recompute();
 
     // Run CDSS Analysis for this day & render directives console
-    const a = analyze(ctx, recordedDay);
-    renderCheckinResults(recordedDay, payload, a);
+    const localAnalysis = analyze(ctx, recordedDay);
+    renderCheckinResults(recordedDay, currentVitals, localAnalysis, fastApiAnalysis);
 
     // Audio Cue
-    if (a.overall.tier >= 2) {
+    const activeTier = fastApiAnalysis ? fastApiAnalysis.tier : localAnalysis.overall.tier;
+    if (activeTier >= 2) {
       playWarn();
     } else {
       playXP();
@@ -1462,13 +1489,14 @@ function setupCheckinForm() {
     const fb = $("checkin-feedback");
     if (fb) {
       const modeText = isNewDay ? `New Mission Day ${recordedDay} registered!` : `Mission Day ${recordedDay} updated!`;
-      fb.innerHTML = `<strong>${modeText}</strong> CDSS re-analysis complete (Tier ${a.overall.tier} status).`;
+      const sourceText = fastApiAnalysis ? "FastAPI NASA Research Intelligence" : "Onboard Engine";
+      fb.innerHTML = `<strong>${modeText}</strong> CDSS re-analysis complete via ${sourceText} (Tier ${activeTier} status).`;
       setTimeout(() => (fb.innerHTML = ""), 6000);
     }
   });
 
   // 8. Render Check-in CDSS Results & Astronaut Action Directives Console
-  function renderCheckinResults(day, payload, a) {
+  function renderCheckinResults(day, vitalsMap, a, fastApi) {
     const panel = $("checkin-results-panel");
     if (!panel || !a) return;
 
@@ -1482,23 +1510,15 @@ function setupCheckinForm() {
     if (astroIdEl) astroIdEl.textContent = `${currentAstronaut.name} (${currentAstronaut.id})`;
     if (dayLabelEl) dayLabelEl.textContent = `Mission Day ${day}`;
 
-    const tier = a.overall.tier;
-    const ws = a.overall.status;
-    const isCrit = tier >= 2 || ws === 2;
+    const tier = fastApi ? fastApi.tier : a.overall.tier;
+    const tierLabel = fastApi ? fastApi.tier_label : (tier === 0 ? "NOMINAL" : tier === 1 ? "WATCH" : tier === 2 ? "HIGH PRIORITY" : "CRITICAL");
 
     // Tier badge
     const tierBadge = $("res-tier-badge");
     const tierText = $("res-tier-text");
     if (tierBadge && tierText) {
       tierBadge.className = `results-tier-badge ${tier === 0 ? "tier-0" : tier === 1 ? "tier-1" : "tier-2"}`;
-      const tierLabels = [
-        "TIER 0 - NOMINAL FLIGHT STATUS",
-        "TIER 1 - PHYSIOLOGICAL DRIFT WATCH",
-        "TIER 2 - AUTONOMOUS COUNTERMEASURE CAUTION",
-        "TIER 3 - CLINICAL WARNING CONTINGENCY",
-        "TIER 4 - CRITICAL CONTINGENCY",
-      ];
-      tierText.textContent = tierLabels[tier] || `TIER ${tier}`;
+      tierText.textContent = `TIER ${tier} - ${tierLabel.toUpperCase()}`;
     }
 
     // Domain Risk Cards Grid
@@ -1537,25 +1557,36 @@ function setupCheckinForm() {
     const devCount = $("res-deviations-count");
     const deviations = [];
 
-    for (const k of ALL_METRICS_KEYS) {
-      const val = payload[k];
-      const base = ctx.base[k];
-      const cfg = C.metrics[k];
-      if (val != null && base && cfg) {
-        const z = (val - base.mean) / base.sd;
-        const drift = ctx.drift[k] ? (ctx.drift[k][day - 1] ?? 0) : 0;
-        if (Math.abs(drift) >= 1.0 || Math.abs(z) >= 1.4) {
-          const isSevere = Math.abs(drift) >= 2.0 || Math.abs(z) >= 2.2;
-          const diff = (val - base.mean).toFixed(cfg.dec || 1);
-          const sign = val >= base.mean ? "+" : "";
-          deviations.push({
-            metric: cfg.name,
-            recorded: `${val} ${cfg.unit}`,
-            baseline: `${base.mean.toFixed(cfg.dec || 1)} ${cfg.unit}`,
-            diff: `${sign}${diff} ${cfg.unit}`,
-            drift: drift.toFixed(1),
-            severe: isSevere,
-          });
+    if (fastApi && fastApi.deviations) {
+      fastApi.deviations.forEach((d) => {
+        deviations.push({
+          metric: d.metric_name,
+          recorded: `${d.recorded_value} ${d.unit}`,
+          diff: `${d.difference >= 0 ? "+" : ""}${d.difference} ${d.unit}`,
+          drift: `${d.ewma_drift >= 0 ? "+" : ""}${d.ewma_drift}`,
+          severe: d.is_severe,
+        });
+      });
+    } else {
+      for (const k of ALL_METRICS_KEYS) {
+        const val = vitalsMap[k];
+        const base = ctx.base[k];
+        const cfg = C.metrics[k];
+        if (val != null && base && cfg) {
+          const z = (val - base.mean) / base.sd;
+          const drift = ctx.drift[k] ? (ctx.drift[k][day - 1] ?? 0) : 0;
+          if (Math.abs(drift) >= 1.0 || Math.abs(z) >= 1.4) {
+            const isSevere = Math.abs(drift) >= 2.0 || Math.abs(z) >= 2.2;
+            const diff = (val - base.mean).toFixed(cfg.dec || 1);
+            const sign = val >= base.mean ? "+" : "";
+            deviations.push({
+              metric: cfg.name,
+              recorded: `${val} ${cfg.unit}`,
+              diff: `${sign}${diff} ${cfg.unit}`,
+              drift: drift.toFixed(1),
+              severe: isSevere,
+            });
+          }
         }
       }
     }
@@ -1566,49 +1597,64 @@ function setupCheckinForm() {
         devList.innerHTML = `<span class="deviation-pill nominal">● All 17 Biometrics Within Individualized ±1.3σ Normal Band</span>`;
       } else {
         devList.innerHTML = deviations.map((d) => `
-          <span class="deviation-pill ${d.severe ? "crit" : ""}" title="Baseline: ${d.baseline} | Drift: ${d.drift}σ">
+          <span class="deviation-pill ${d.severe ? "crit" : ""}" title="Drift: ${d.drift}σ">
             <strong>${d.metric}:</strong> ${d.recorded} (${d.diff}, ${d.drift}σ)
           </span>
         `).join("");
       }
     }
 
+    // NASA/CSA Evidence Citations List
+    const citList = $("res-citations-list");
+    if (citList) {
+      const citations = (fastApi && fastApi.evidence_citations) ? fastApi.evidence_citations : [
+        { agency: "NASA", title: "5 Hazards of Human Spaceflight", url: "https://www.nasa.gov/hrp/hazards/" },
+        { agency: "NASA", title: "Risks of Human Spaceflight (HRP)", url: "https://www.nasa.gov/hrp/risks/" },
+        { agency: "CSA", title: "Monitoring Radiation for Astronaut Health", url: "https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp" },
+      ];
+      citList.innerHTML = citations.map((c) => `
+        <div class="citation-item">
+          <strong>[${c.agency}] ${c.title}</strong> — Verified Spaceflight Clinical Citation
+          <a href="${c.url}" target="_blank" rel="noopener">Official Reference ↗</a>
+        </div>
+      `).join("");
+    }
+
     // Action Commands to Astronaut
     const commandsList = $("res-commands-list");
-    const commands = [];
-
-    if (a.domains.imm?.status >= 2 || a.domains.imm?.rule === "infection" || payload.temp >= 37.8) {
-      commands.push(`<li><span class="cmd-badge crit">IMMUNE INTERVENTION</span> <strong>Infection / Hyperthermia Protocol:</strong> Isolate in private crew quarters. Ingest 1000 mL oral rehydration solution. Run cartridge blood analysis on MinION sequencer.</li>`);
-    }
-    if (a.domains.env?.status >= 1 || payload.co2 >= 3.5) {
-      commands.push(`<li><span class="cmd-badge ${payload.co2 >= 4.5 ? "crit" : "warn"}">ECLSS DIRECTIVE</span> <strong>Elevated Cabin CO2:</strong> Verify Carbon Dioxide Removal Assembly (CDRA) desiccant bed cycle. Ensure crew module ventilation airflow exceeds 0.05 m/s.</li>`);
-    }
-    if (payload.slp <= 5.5 || payload.fat >= 7) {
-      commands.push(`<li><span class="cmd-badge warn">CIRCADIAN PROTOCOL</span> <strong>Circadian Sleep Rest:</strong> Stand down from upcoming EVA/robotic maneuvers for 24h. Dim cabin lighting to amber (450nm-depleted) 2 hours before scheduled rest.</li>`);
-    }
-    if (payload.mood <= 4 || payload.stress >= 7) {
-      commands.push(`<li><span class="cmd-badge warn">NEURO-COGNITIVE</span> <strong>Cognitive Decompression:</strong> Activate 15-minute guided binaural relaxation in the VR headset workstation. Notify onboard medical officer log.</li>`);
-    }
-    if (payload.sbp >= 135 || payload.dbp >= 90 || (payload.symptoms && payload.symptoms.includes("EyeIrritation"))) {
-      commands.push(`<li><span class="cmd-badge warn">SANS PROTOCOL</span> <strong>Cephalad Fluid Shift / SANS:</strong> Initiate 30-minute Lower Body Negative Pressure (LBNP) chamber protocol at -25 mmHg. Perform optical fundus photography inspection.</li>`);
-    }
-    if (payload.hydration < 8) {
-      commands.push(`<li><span class="cmd-badge warn">FLUID BALANCE</span> <strong>Fluid Deficit Countermeasure:</strong> Ingest 2 additional 250mL electrolyte beverage packs to compensate for microgravity renal excretion.</li>`);
-    }
-    if (payload.ex < 30 || payload.grip <= 35) {
-      commands.push(`<li><span class="cmd-badge warn">BONE &amp; MUSCLE</span> <strong>Musculoskeletal Loading:</strong> Schedule mandatory supplemental 60-minute ARED cycle (squat &amp; deadlift loading) to prevent bone demineralization.</li>`);
-    }
-    if (a.spe) {
-      commands.unshift(`<li><span class="cmd-badge crit">RADIATION EMERGENCY</span> <strong>Solar Particle Event (SPE):</strong> Move immediately to the radiation storm shelter module with water wall shielding.</li>`);
-    }
-
-    if (commands.length === 0) {
-      commands.push(`<li><span class="cmd-badge">STABLE</span> <strong>Nominal Flight Status:</strong> All physiological markers match your individualized flight baseline. Continue standard 120-minute daily resistive exercise regimen.</li>`);
-      commands.push(`<li><span class="cmd-badge">ROUTINE</span> <strong>Hydration &amp; Rest:</strong> Maintain standard 2.5L daily hydration target and observe scheduled circadian wind-down at 21:00 MET.</li>`);
-    }
-
     if (commandsList) {
-      commandsList.innerHTML = commands.join("");
+      if (fastApi && fastApi.predicted_commands && fastApi.predicted_commands.length > 0) {
+        commandsList.innerHTML = fastApi.predicted_commands.map((cmd) => {
+          const isCrit = cmd.priority === "CRITICAL";
+          const isWarn = cmd.priority === "URGENT" || cmd.priority === "WATCH";
+          const badgeClass = isCrit ? "crit" : isWarn ? "warn" : "";
+          return `
+            <li>
+              <span class="cmd-badge ${badgeClass}">${cmd.priority}</span>
+              <div style="flex:1;">
+                <strong>${cmd.title}:</strong> ${cmd.command}
+                <div class="cmd-rationale" style="margin-top:6px;font-size:0.76rem;color:var(--text-sec);line-height:1.4;">
+                  <span style="color:var(--cyan);font-family:var(--font-mono);font-weight:700;">NASA HRP RATIONALE:</span> ${cmd.rationale}
+                  ${cmd.hazard ? `<br><span style="color:var(--text-dim);font-size:0.7rem;">Hazard: ${cmd.hazard} | Source: ${cmd.evidence_source || 'NASA HRP'}</span>` : ''}
+                </div>
+              </div>
+            </li>
+          `;
+        }).join("");
+      } else {
+        // Fallback local commands
+        const cmds = [];
+        if (a.domains.imm?.status >= 2 || vitalsMap.temp >= 37.8) {
+          cmds.push(`<li><span class="cmd-badge crit">IMMUNE INTERVENTION</span> <strong>Infection / Hyperthermia Protocol:</strong> Isolate in private crew quarters. Ingest 1000 mL oral rehydration solution. Run cartridge blood analysis on MinION sequencer.</li>`);
+        }
+        if (vitalsMap.slp <= 5.5 || vitalsMap.fat >= 7) {
+          cmds.push(`<li><span class="cmd-badge warn">CIRCADIAN PROTOCOL</span> <strong>Circadian Sleep Rest:</strong> Stand down from upcoming EVA maneuvers for 24h. Dim cabin lighting to amber (450nm-depleted) 2 hours before rest.</li>`);
+        }
+        if (cmds.length === 0) {
+          cmds.push(`<li><span class="cmd-badge">STABLE</span> <strong>Nominal Flight Status:</strong> All physiological markers match baseline. Maintain 120-minute daily resistive exercise regimen.</li>`);
+        }
+        commandsList.innerHTML = cmds.join("");
+      }
     }
 
     // Connect Jump to Digital Twin Button
@@ -1621,6 +1667,20 @@ function setupCheckinForm() {
           if (twin) twin.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 100);
       };
+    }
+
+    // Update Overview Tab Directive Commands with FastAPI results
+    if (fastApi && fastApi.predicted_commands) {
+      const overviewList = $("overview-commands-list");
+      const overviewHeadline = $("overview-action-headline");
+      const overviewTier = $("overview-action-tier");
+      if (overviewTier) overviewTier.textContent = `TIER ${fastApi.tier}`;
+      if (overviewHeadline) overviewHeadline.textContent = `FASTAPI CDSS: ${fastApi.worst_domain_name.toUpperCase()} (${fastApi.status.toUpperCase()})`;
+      if (overviewList) {
+        overviewList.innerHTML = fastApi.predicted_commands.slice(0, 4).map((c) => `
+          <li><span class="cmd-badge ${c.priority === 'CRITICAL' ? 'crit' : c.priority === 'URGENT' || c.priority === 'WATCH' ? 'warn' : ''}">${c.priority}</span> ${c.command}</li>
+        `).join("");
+      }
     }
 
     // Smoothly scroll to results panel
