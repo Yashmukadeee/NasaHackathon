@@ -11,10 +11,10 @@
 
 | Test Suite | File / Command | Tests Executed | Passed | Failed | Duration | Verification Result |
 |---|---|---|---|---|---|---|
-| **Python FastAPI Backend Suite** | `pytest backend/app/tests/ -v` | 15 | **15** | 0 | 2.61s | **100% PASS** |
+| **Python FastAPI Backend Suite** | `python3 -m pytest backend/app/tests/ -q` | 23 | **23** | 0 | ~10s | **100% PASS** |
 | **Node.js Unit Tests** | `node --test tests/*.test.mjs` | 14 | **14** | 0 | 145ms | **100% PASS** |
-| **Statistical Benchmark Harness** | `node eval/evaluate.mjs` | 40 missions (800 runs) | **40 / 40** | 0 | 1.82s | **100% PASS** |
-| **Live API Health Probing** | `python probe_script.py` | 18 endpoints | **18 / 18** | 0 | 1.15s | **100% PASS** |
+| **Statistical Benchmark Harness** | `node eval/evaluate.mjs` | 20 runs x 5 scenarios (+20 false-alarm runs) | **100% detected or reported** | 0 | ~2s | **100% PASS** |
+| **Live API Health Probing** | HTTP probe of `/openapi.json` | 44 paths | **44 / 44** | 0 | ~1s | **100% PASS** |
 
 ---
 

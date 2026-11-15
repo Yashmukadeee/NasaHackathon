@@ -3,6 +3,9 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+import importlib
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
@@ -11,6 +14,8 @@ from app.config import settings
 from app.database import AsyncSessionLocal, init_db
 from app.models.astronaut import Astronaut
 from app.models.ground_contact import GroundContact
+
+logger = logging.getLogger("astra.main")
 
 
 # ---------------------------------------------------------------------------
@@ -107,17 +112,18 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_ORIGIN],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
-# Routers — imported lazily so missing router files don't crash startup.
-# Other workers will add these; we guard with try/except so the server can
-# still start even if a router hasn't been implemented yet.
+# Routers
 # ---------------------------------------------------------------------------
+# Every router is imported explicitly. A missing module is logged and skipped so
+# the failure is visible in the logs and in /api/v1/status, instead of silently
+# disappearing behind a bare `except: pass`.
 
 _ROUTER_IMPORTS = [
     ("app.routers.astronauts", "router"),
@@ -132,14 +138,18 @@ _ROUTER_IMPORTS = [
     ("app.routers.sync", "router"),
 ]
 
+registered_routers: list[str] = []
+failed_routers: list[dict] = []
+
 for _module_path, _attr in _ROUTER_IMPORTS:
     try:
-        import importlib as _importlib
-        _mod = _importlib.import_module(_module_path)
+        _mod = importlib.import_module(_module_path)
         _router = getattr(_mod, _attr)
         app.include_router(_router, prefix="/api/v1")
-    except (ImportError, AttributeError):
-        pass  # Router not yet implemented; skip gracefully
+        registered_routers.append(_module_path)
+    except (ImportError, AttributeError) as exc:
+        failed_routers.append({"module": _module_path, "error": str(exc)})
+        logger.warning("[ASTRA] Router %s not registered: %s", _module_path, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +167,12 @@ async def status():
         "status": "ONLINE",
         "service": "ASTRA",
         "prototype_warning": settings.PROTOTYPE_WARNING,
+        "api_auth_required": bool(settings.FASTAPI_API_KEY),
+        "registered_routers": registered_routers,
+        "failed_routers": failed_routers,
+        # FastAPI 0.163 mounts included routers lazily, so app.routes undercounts;
+        # derive the real endpoint count from the generated OpenAPI schema.
+        "route_count": len(app.openapi().get("paths", {})),
     }
 
 

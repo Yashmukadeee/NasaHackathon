@@ -118,6 +118,10 @@
           </div>
 
           <div class="header-status">
+            <div class="header-pill status-delay" id="header-fastapi-pill" title="FastAPI Backend Link">
+              <span class="pill-dot"></span>
+              <span id="fastapi-status-label" class="pill-label">FastAPI Offline</span>
+            </div>
             <div class="header-pill status-ok" id="header-supabase-pill" title="Cloud Database Link">
               <span class="pill-dot"></span>
             </div>
@@ -875,13 +879,14 @@
         <button id="btn-transmit-ground" class="header-action-btn danger">Transmit to Ground Console</button>
         <button id="btn-close-emergency" class="header-action-btn">Acknowledge &amp; Close</button>
       </div>
+      <div id="emergency-comm-badge" class="badge-queued" style="margin-top:10px;font-size:0.75rem">LOCAL QUEUED (READY FOR TRANSMISSION)</div>
     </div>
   </dialog>
 
   <!-- Tooltip for Anatomical Hotspots -->
   <div class="body-tooltip" id="body-tooltip"></div>
 
-  <script type="module" src="app.js?v=20261115_v3"></script>
+  <script type="module" src="app.js"></script>
 </body>
 
 </html>

@@ -105,6 +105,13 @@ function withStore(storeName, mode, callback) {
 }
 
 /**
+ * Compound primary key for per-day records (telemetry + check-ins).
+ */
+export function compoundKey(astronautId, day) {
+  return `${astronautId}_${day}`;
+}
+
+/**
  * Validate telemetry record structure.
  */
 function validateTelemetry(record) {
@@ -119,7 +126,7 @@ function validateTelemetry(record) {
  */
 export function saveTelemetry(record) {
   validateTelemetry(record);
-  const id = `${record.astronaut_id}_${record.day}`;
+  const id = compoundKey(record.astronaut_id, record.day);
   const payload = {
     id,
     astronaut_id: record.astronaut_id,
@@ -136,7 +143,7 @@ export function saveTelemetry(record) {
  * Retrieve telemetry for an astronaut on a specific day.
  */
 export function getTelemetry(astronautId, day) {
-  const id = `${astronautId}_${day}`;
+  const id = compoundKey(astronautId, day);
   return withStore("telemetry", "readonly", (store) => store.get(id));
 }
 
@@ -168,7 +175,7 @@ export function getTelemetryRange(astronautId, startDay = 1, endDay = 180) {
  */
 export function saveCheckIn(record) {
   if (!record.astronaut_id || !record.day) throw new Error("Invalid check-in record parameters");
-  const id = `${record.astronaut_id}_${record.day}`;
+  const id = compoundKey(record.astronaut_id, record.day);
   const payload = {
     ...record,
     id,
@@ -201,7 +208,7 @@ export function saveCheckIn(record) {
  * Retrieve a specific day check-in for an astronaut.
  */
 export function getCheckIn(astronautId, day) {
-  const id = `${astronautId}_${day}`;
+  const id = compoundKey(astronautId, day);
   return withStore("checkins", "readonly", (store) => store.get(id));
 }
 
@@ -429,7 +436,7 @@ export async function seedInitialData(benchmarkMission) {
       vitals[k] = benchmarkMission.series[k][d - 1];
     }
     store.put({
-      id: `ASTRO-1_${d}`,
+      id: compoundKey("ASTRO-1", d),
       astronaut_id: "ASTRO-1",
       day: d,
       vitals,

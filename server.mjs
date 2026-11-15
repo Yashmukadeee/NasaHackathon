@@ -70,6 +70,59 @@ function parseJsonBody(req) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Validation — single source of truth for the request handlers below
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a daily check-in payload. Throws Error with a human readable message
+ * on the first violation; returns the normalised record on success.
+ */
+function validateCheckin(body) {
+  const { astronaut_id, day, mood, stress, fatigue, sleep, symptoms, notes } = body || {};
+
+  if (!astronaut_id || typeof astronaut_id !== "string") {
+    throw new Error("Validation failed: 'astronaut_id' is required");
+  }
+  if (typeof day !== "number" || day < 1 || day > 180) {
+    throw new Error("Validation failed: 'day' must be between 1 and 180");
+  }
+  if (typeof mood !== "number" || mood < 0 || mood > 10) {
+    throw new Error("Validation failed: 'mood' must be between 0 and 10");
+  }
+  if (typeof stress !== "number" || stress < 0 || stress > 10) {
+    throw new Error("Validation failed: 'stress' must be between 0 and 10");
+  }
+  if (typeof fatigue !== "number" || fatigue < 0 || fatigue > 10) {
+    throw new Error("Validation failed: 'fatigue' must be between 0 and 10");
+  }
+  if (typeof sleep !== "number" || sleep < 0 || sleep > 24) {
+    throw new Error("Validation failed: 'sleep' must be between 0 and 24 hours");
+  }
+
+  return {
+    id: `checkin_${astronaut_id}_${day}`,
+    astronaut_id,
+    day,
+    mood,
+    stress,
+    fatigue,
+    sleep,
+    symptoms: Array.isArray(symptoms) ? symptoms : [],
+    notes: typeof notes === "string" ? notes.slice(0, 1000) : "",
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Validate a store-and-forward batch. Throws on a malformed envelope and returns
+ * the ids the server will acknowledge.
+ */
+function validateSyncBatch(body) {
+  if (!body || !Array.isArray(body.records)) throw new Error("Expected 'records' array in request body");
+  return body.records.map((r) => r && r.id).filter(Boolean);
+}
+
 // Router for /api/v1/*
 async function handleApiRequest(req, res, parsedUrl) {
   const pathname = parsedUrl.pathname;
@@ -137,46 +190,7 @@ async function handleApiRequest(req, res, parsedUrl) {
   if (method === "POST" && pathname === "/api/v1/checkin") {
     try {
       const body = await parseJsonBody(req);
-      const { astronaut_id, day, mood, stress, fatigue, sleep, symptoms, notes } = body;
-
-      if (!astronaut_id || typeof astronaut_id !== "string") {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'astronaut_id' is required" });
-        return;
-      }
-      if (typeof day !== "number" || day < 1 || day > 180) {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'day' must be between 1 and 180" });
-        return;
-      }
-      if (typeof mood !== "number" || mood < 0 || mood > 10) {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'mood' must be between 0 and 10" });
-        return;
-      }
-      if (typeof stress !== "number" || stress < 0 || stress > 10) {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'stress' must be between 0 and 10" });
-        return;
-      }
-      if (typeof fatigue !== "number" || fatigue < 0 || fatigue > 10) {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'fatigue' must be between 0 and 10" });
-        return;
-      }
-      if (typeof sleep !== "number" || sleep < 0 || sleep > 24) {
-        sendJson(res, 400, { success: false, error: "Validation failed: 'sleep' must be between 0 and 24 hours" });
-        return;
-      }
-
-      const record = {
-        id: `checkin_${astronaut_id}_${day}`,
-        astronaut_id,
-        day,
-        mood,
-        stress,
-        fatigue,
-        sleep,
-        symptoms: Array.isArray(symptoms) ? symptoms : [],
-        notes: typeof notes === "string" ? notes.slice(0, 1000) : "",
-        timestamp: new Date().toISOString(),
-      };
-
+      const record = validateCheckin(body);
       inMemoryStore.checkins.push(record);
       sendJson(res, 201, {
         success: true,
@@ -214,17 +228,10 @@ async function handleApiRequest(req, res, parsedUrl) {
   if (method === "POST" && pathname === "/api/v1/sync/batch") {
     try {
       const body = await parseJsonBody(req);
-      const records = body.records;
-
-      if (!Array.isArray(records)) {
-        sendJson(res, 400, { success: false, error: "Expected 'records' array in request body" });
-        return;
-      }
-
-      const acknowledged = [];
+      const acknowledged = validateSyncBatch(body);
       const timestamp = new Date().toISOString();
 
-      for (const item of records) {
+      for (const item of body.records) {
         if (!item || !item.id) continue;
         inMemoryStore.syncLogs.push({
           sync_id: item.id,
@@ -232,7 +239,6 @@ async function handleApiRequest(req, res, parsedUrl) {
           astronaut_id: item.astronaut_id,
           received_at: timestamp,
         });
-        acknowledged.push(item.id);
       }
 
       sendJson(res, 200, {
@@ -286,10 +292,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       "Content-Type": contentType,
       "Content-Length": stats.size,
-      // Aggressively disable caching so local reloads ALWAYS get fresh code
-      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      // Revalidate every load in the HTTP cache; the service worker owns the
+      // offline copy and versions it, so static assets stay fresh on deploy.
+      "Cache-Control": "no-cache",
       "Pragma": "no-cache",
-      "Expires": "0",
     });
 
     const stream = fs.createReadStream(filePath);

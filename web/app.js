@@ -1249,10 +1249,7 @@ function setupSyncHandlers() {
         const resp = await fetch("/api/v1/sync/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            astronaut_id: currentAstronaut ? currentAstronaut.id : "ASTRO-1",
-            records: pending
-          }),
+          body: JSON.stringify({ records: pending }),
         });
         if (resp.ok) serverAck = true;
       } catch (e) {
@@ -2174,11 +2171,6 @@ async function init() {
       $("cm").textContent = "";
       $("dg").showModal();
     });
-    // Brand Logo Click -> Return to Mission Overview Flight Deck
-    document.querySelector(".brand-item")?.addEventListener("click", () => {
-      document.querySelector('[data-tab="tab-overview"]')?.click();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
     $("crew-ripple-btn")?.addEventListener("click", () => {
       renderCrewModal(T);
       $("crew-modal").showModal();
@@ -2476,10 +2468,10 @@ async function init() {
             </div>
 
             <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border-subtle);padding-top:10px;">
-              ${isConn ? 
-                `<button class="header-action-btn danger btn-dev-disconnect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Disconnect</button>` : 
-                `<button class="header-action-btn primary btn-dev-connect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Connect</button>`
-              }
+              ${isConn ?
+            `<button class="header-action-btn danger btn-dev-disconnect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Disconnect</button>` :
+            `<button class="header-action-btn primary btn-dev-connect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Connect</button>`
+          }
             </div>
           </div>
         `;
@@ -2522,7 +2514,7 @@ async function init() {
             const norm = p.normalized || {};
             const st = p.storage || {};
             const supSynced = st.supabase_synced ? "CLOUD_SYNCED" : "LOCAL_BUFFERED";
-            return `[${norm.timestamp?.slice(11,19) || 'LIVE'}] DEV:${norm.device_id} | ${norm.metric_name?.toUpperCase()}: ${norm.metric_value} ${norm.unit} (Qual: ${norm.signal_quality}) -> ${supSynced} | Tier: ${p.analysis?.tier}`;
+            return `[${norm.timestamp?.slice(11, 19) || 'LIVE'}] DEV:${norm.device_id} | ${norm.metric_name?.toUpperCase()}: ${norm.metric_value} ${norm.unit} (Qual: ${norm.signal_quality}) -> ${supSynced} | Tier: ${p.analysis?.tier}`;
           }).join("\n");
 
           if (consoleEl) {
@@ -2531,8 +2523,8 @@ async function init() {
 
           if (feedback) {
             const hasAlert = processed.some(p => p.alert);
-            feedback.innerHTML = hasAlert ? 
-              `<span style="color:#f87171">⚠️ ALERT GENERATED: Abnormal reading detected & analyzed</span>` : 
+            feedback.innerHTML = hasAlert ?
+              `<span style="color:#f87171">⚠️ ALERT GENERATED: Abnormal reading detected & analyzed</span>` :
               `<span style="color:#34d399">✔ Telemetry normalized, stored in Supabase/local, and baseline-analyzed</span>`;
           }
 

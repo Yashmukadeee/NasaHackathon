@@ -10,8 +10,13 @@ Requires Python 3 and Node 18+ (no npm install needed).
 npm run data     # regenerate simulated missions (already included)
 npm test         # unit tests
 npm run eval     # detection latency, sensitivity, false alarms -> docs/evaluation.md
-npm start        # open http://localhost:8080
+npm start        # static app + ground bridge at http://localhost:8080
+npm run backend  # optional FastAPI service at http://localhost:8000 (Swagger: /docs)
 ```
+The app works fully without the backend (onboard engine + IndexedDB). Start
+`npm run backend` as well to enable the NASA research CDSS, wearable gateway,
+Supabase sync and ground-team escalation features. Point the app at another API
+with `http://localhost:8080/?api=http://127.0.0.1:8000`.
 
 ## What you can do in the app
 - Scrub or play through a 180-day mission; jump buttons go to the demo moments.
@@ -33,12 +38,17 @@ npm start        # open http://localhost:8080
 ## Project layout
 ```
 simulator/simulate.py   data generator with scripted anomalies (ground truth)
-web/                    static app (index.html, app.js, engine.js, config.js, sw.js)
+web/                    static app (index.html, app.js, engine.js, config.js, sw.js, db.js)
+server.mjs              static server + /api/v1 ground bridge (npm start)
 eval/evaluate.mjs       evaluation harness
 tests/                  unit tests
+backend/                optional FastAPI service (astronauts, telemetry, analysis,
+                        research, alerts, radiation, ground-team, devices, sync)
 docs/                   PRD, architecture, evaluation
 ```
-Thresholds, indicators and action text are in `web/config.js` so a medical reviewer can edit them without touching code. The thresholds are placeholders; get them reviewed and cite NASA Human Research Program sources before presenting them as real.
+The detection thresholds live in `web/config.js` (frontend) and
+`backend/app/services/health_engine.py` (backend); keep the two in step.
+Thresholds, indicators and action text are in `web/config.js` so a medical reviewer can edit them without touching code.
 
 ## Safety and ethics
 No medicine doses are suggested. Data stays on the device unless the astronaut copies the summary. Everything is clearly labeled as simulated decision support.

@@ -7,6 +7,9 @@
     "data": "python3 simulator/simulate.py --all",
     "test": "node --test tests/*.test.mjs",
     "eval": "node eval/evaluate.mjs",
-    "start": "python3 -m http.server 8080 --directory web"
+    "start": "node server.mjs",
+    "serve": "node server.mjs",
+    "backend": "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
+    "pytest": "python3 -m pytest backend/app/tests -q"
   }
 }

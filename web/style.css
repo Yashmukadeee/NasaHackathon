@@ -458,6 +458,16 @@ h1, h2, h3, h4 {
   border: 1px solid rgba(0, 230, 208, 0.22);
   color: #91A9B8;
   border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+.app-header .header-pill .pill-label {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .app-header .header-pill .pill-dot {
   width: 7px;

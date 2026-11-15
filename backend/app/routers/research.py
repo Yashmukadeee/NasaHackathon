@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
-from app.services.evidence_mapping import get_evidence_for_alert
+from app.services.evidence_mapping import DOMAIN_NAMES, get_evidence_for_alert
 from app.services.nasa_research import (
     DOMAIN_FINDINGS,
     RESEARCH_SOURCES,
@@ -12,6 +12,25 @@ from app.services.nasa_research import (
 from app.services.research_retrieval import refresh_all_sources
 
 router = APIRouter(prefix="/research", tags=["research"])
+
+# Friendly domain names accepted in addition to the canonical short keys
+# (imm, msk, car, beh, env, rad).
+DOMAIN_ALIASES = {
+    "immune": "imm", "immune_system": "imm", "immunity": "imm",
+    "bone": "msk", "muscle": "msk", "musculoskeletal": "msk", "bone_and_muscle": "msk",
+    "heart": "car", "cardiovascular": "car", "cardiac": "car",
+    "mind": "beh", "mood": "beh", "behavioral": "beh", "behaviour": "beh",
+    "behavioral_psychological": "beh", "mind_and_mood": "beh", "psychological": "beh",
+    "habitat": "env", "habitat_air": "env", "environmental": "env", "environment": "env", "air": "env",
+    "radiation": "rad", "space_radiation": "rad",
+}
+
+
+def normalize_domain(domain: str) -> str:
+    d = (domain or "").strip().lower()
+    if d in DOMAIN_NAMES:
+        return d
+    return DOMAIN_ALIASES.get(d, d)
 
 
 @router.get("/sources")
@@ -35,9 +54,13 @@ async def list_findings(domain: Optional[str] = Query(None)):
 
 @router.get("/domain/{domain}")
 async def get_domain_research(domain: str, tier: int = Query(1, ge=0, le=3)):
-    evidence = get_evidence_for_alert(domain, tier)
+    canonical = normalize_domain(domain)
+    evidence = get_evidence_for_alert(canonical, tier)
     if not evidence.get("findings"):
-        raise HTTPException(status_code=404, detail=f"Domain {domain} not recognized")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Domain '{domain}' not recognized. Use one of: {', '.join(DOMAIN_NAMES)}",
+        )
     return evidence
 
 
@@ -57,7 +80,7 @@ async def analyze_research_evidence(payload: dict):
     Connects observed clinical anomalies to verified NASA HRP and CSA research evidence.
     Returns associated NASA hazards, risks, findings, and traceable references.
     """
-    domain = payload.get("domain", "car")
+    domain = normalize_domain(payload.get("domain", "car"))
     tier = int(payload.get("tier", 1))
 
     evidence = get_evidence_for_alert(domain, tier)

@@ -362,25 +362,78 @@ def ground_summary(ctx: EngineContext, t: int) -> str:
     return s
 
 
+def _repo_root() -> Optional[str]:
+    """Walk up from this file until the repo root (the dir holding web/data)."""
+    here = os.path.abspath(__file__)
+    for _ in range(6):
+        here = os.path.dirname(here)
+        if os.path.isdir(os.path.join(here, "web", "data")):
+            return here
+    return None
+
+
+def _mission_json_path() -> str:
+    """Resolve web/data/mission.json without hardcoding a machine-specific path."""
+    env_path = os.environ.get("ASTRA_MISSION_DATA")
+    if env_path:
+        return env_path
+    root = _repo_root()
+    if root:
+        return os.path.join(root, "web", "data", "mission.json")
+    raise FileNotFoundError(
+        "Could not locate web/data/mission.json. Set ASTRA_MISSION_DATA to its path."
+    )
+
+
+def _derive_crew_series(base_series: dict, astronaut_id: str) -> dict:
+    """
+    Build a deterministic, crew-specific variant of the shared mission series.
+
+    mission.json describes one benchmark crew member. Every astronaut still
+    needs a personal baseline, so each crew member gets their own fixed offset
+    and small per-day noise, seeded from their id. Deterministic across process
+    restarts (crc32, not the salted builtin hash()).
+    """
+    import random
+    import zlib
+
+    seed = zlib.crc32(astronaut_id.encode("utf-8")) & 0xFFFFFFFF
+    rng = random.Random(seed)
+    derived: dict = {}
+    for k, vals in base_series.items():
+        sd = METRICS_CONFIG.get(k, {}).get("sd", 1.0) or 1.0
+        offset = rng.gauss(0.0, 0.6 * sd)
+        noise_sd = 0.15 * sd
+        derived[k] = [
+            None if v is None else round(v + offset + rng.gauss(0.0, noise_sd), 3)
+            for v in vals
+        ]
+    return derived
+
+
+def load_mission_document() -> dict:
+    """Load the raw mission.json document (meta + series [+ astronauts])."""
+    path = _mission_json_path()
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def load_mission_telemetry(astronaut_id: str = "ASTRO-1") -> dict:
-    # Resolve mission.json path
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    json_path = os.path.join(base_dir, "web", "data", "mission.json")
-    if not os.path.exists(json_path):
-        json_path = os.path.join("c:\\NasaHackathon-master", "web", "data", "mission.json")
+    data = load_mission_document()
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    # Per-astronaut series shipped in the dataset take priority.
+    astronauts = data.get("astronauts") or []
+    for a in astronauts:
+        if a.get("id") == astronaut_id and a.get("series"):
+            return a["series"]
 
-    # If data has a top-level series (as in standard mission.json), return that
+    # Standard mission.json: one shared series, with derived crew variants.
     if "series" in data:
-        return data["series"]
+        base = data["series"]
+        if not astronaut_id or astronaut_id == "ASTRO-1":
+            return base
+        return _derive_crew_series(base, astronaut_id)
 
-    # Otherwise search in astronauts array
-    for a in data.get("astronauts", []):
-        if a.get("id") == astronaut_id:
-            return a.get("series", {})
-
-    if data.get("astronauts"):
-        return data["astronauts"][0].get("series", {})
+    if astronauts:
+        return astronauts[0].get("series", {})
     return {}
