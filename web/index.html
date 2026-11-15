@@ -17,13 +17,11 @@
   <video id="preloader-video" class="preloader-video" autoplay muted playsinline preload="auto">
     <source src="preloader.mp4" type="video/mp4">
   </video>
-  <button id="preloader-skip" class="preloader-skip-btn" type="button">Skip Intro ➔</button>
 </div>
 <script>
   (function() {
     var p = document.getElementById("mission-preloader");
     var v = document.getElementById("preloader-video");
-    var s = document.getElementById("preloader-skip");
     var done = false;
     function dismiss() {
       if (done) return;
@@ -36,10 +34,6 @@
     }
     if (v) v.play().catch(function(){});
     setTimeout(dismiss, 3000);
-    if (s) s.onclick = dismiss;
-    window.addEventListener("keydown", function(e) {
-      if (e.key === "Escape" || e.key === " " || e.key === "Enter") dismiss();
-    }, { once: true });
   })();
 </script>
 

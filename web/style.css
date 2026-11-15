@@ -159,30 +159,6 @@ h1, h2, h3, h4 {
     transform: scale(1.48);
   }
 }
-.preloader-skip-btn {
-  position: absolute;
-  bottom: 32px;
-  right: 32px;
-  background: rgba(11, 23, 35, 0.8);
-  border: 1px solid rgba(54, 230, 208, 0.5);
-  color: var(--cyan);
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all var(--transition);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  z-index: 10;
-}
-.preloader-skip-btn:hover {
-  background: rgba(54, 230, 208, 0.25);
-  border-color: var(--cyan);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 0 16px var(--cyan);
 }
 
 .brand-item {
