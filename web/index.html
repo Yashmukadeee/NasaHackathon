@@ -12,6 +12,37 @@
 </head>
 <body class="astra-body">
 
+<!-- Fullscreen Mission Preloader Video (Plays for 3 seconds then fades out smoothly) -->
+<div id="mission-preloader" class="preloader-overlay">
+  <video id="preloader-video" class="preloader-video" autoplay muted playsinline preload="auto">
+    <source src="preloader.mp4" type="video/mp4">
+  </video>
+  <button id="preloader-skip" class="preloader-skip-btn" type="button">Skip Intro ➔</button>
+</div>
+<script>
+  (function() {
+    var p = document.getElementById("mission-preloader");
+    var v = document.getElementById("preloader-video");
+    var s = document.getElementById("preloader-skip");
+    var done = false;
+    function dismiss() {
+      if (done) return;
+      done = true;
+      if (p) p.classList.add("fade-out");
+      setTimeout(function() {
+        if (v) v.pause();
+        if (p) p.style.display = "none";
+      }, 850);
+    }
+    if (v) v.play().catch(function(){});
+    setTimeout(dismiss, 3000);
+    if (s) s.onclick = dismiss;
+    window.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" || e.key === " " || e.key === "Enter") dismiss();
+    }, { once: true });
+  })();
+</script>
+
 <div class="app-shell">
 
   <!-- ============================================================
@@ -20,11 +51,8 @@
   <header class="app-header">
     <div class="header-inner">
       <div class="header-left">
-        <div class="brand-item">
+        <div class="brand-item" title="ASTRA">
           <img src="logo.jpg" alt="ASTRA Mission Logo" class="brand-logo-img">
-          <div class="brand-text">
-            <span class="brand-title">ASTRA</span>
-          </div>
         </div>
 
         <!-- Core 4 Tabs (Option A) -->
