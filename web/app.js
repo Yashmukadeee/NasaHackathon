@@ -67,17 +67,17 @@ const ALL_METRICS_KEYS = [
   "headache", "co2", "dose"
 ];
 
-// Check-in form fields with clear categories and icons
+// Check-in form fields with clear categories and clean aerospace styling
 const CHECKIN_FIELDS = [
-  { k: "mood",      icon: "😊", label: "Subjective Mood",      min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "stress",    icon: "🧘", label: "Workload Stress",      min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "fat",       icon: "🔋", label: "Physical Fatigue",     min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "slp",       icon: "🌙", label: "Sleep Rested",         min: 0,  max: 12,  step: 0.5, unit: "h" },
-  { k: "hydration", icon: "💧", label: "Hydration Intake",     min: 0,  max: 15,  step: 1,   unit: "gl" },
-  { k: "nutrition", icon: "🥗", label: "Nutrition Quality",    min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "headache",  icon: "🤕", label: "Headache / Pressure",  min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "sbp",       icon: "❤️", label: "Systolic BP",          min: 90, max: 180, step: 1,   unit: "mmHg" },
-  { k: "dbp",       icon: "🩺", label: "Diastolic BP",         min: 60, max: 120, step: 1,   unit: "mmHg" },
+  { k: "mood",      icon: "", label: "Subjective Mood",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "stress",    icon: "", label: "Workload Stress",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "fat",       icon: "", label: "Physical Fatigue",     min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "slp",       icon: "", label: "Sleep Rested",         min: 0,  max: 12,  step: 0.5, unit: "h" },
+  { k: "hydration", icon: "", label: "Hydration Intake",     min: 0,  max: 15,  step: 1,   unit: "gl" },
+  { k: "nutrition", icon: "", label: "Nutrition Quality",    min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "headache",  icon: "", label: "Headache / Pressure",  min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "sbp",       icon: "", label: "Systolic BP",          min: 90, max: 180, step: 1,   unit: "mmHg" },
+  { k: "dbp",       icon: "", label: "Diastolic BP",         min: 60, max: 120, step: 1,   unit: "mmHg" },
 ];
 
 // ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
@@ -604,8 +604,8 @@ function renderActionCommands(a) {
     focusBanner.className = `workstation-focus-banner ${isCrit ? "" : "banner-warn"}`;
     if (focusTitle) {
       focusTitle.textContent = isCrit
-        ? `🚨 CRITICAL PHYSIOLOGICAL ALERT: ${domainName.toUpperCase()}`
-        : `⚠️ WATCH RISK DETECTED: ${domainName.toUpperCase()}`;
+        ? `CRITICAL PHYSIOLOGICAL ALERT: ${domainName.toUpperCase()}`
+        : `WATCH RISK DETECTED: ${domainName.toUpperCase()}`;
     }
     if (focusSub) {
       focusSub.textContent = isCrit
@@ -623,8 +623,8 @@ function renderActionCommands(a) {
   }
 
   const headline = isCrit
-    ? `🚨 CRITICAL CONTINGENCY: ${domainName.toUpperCase()} PROTOCOL ACTIVATED`
-    : `⚠️ WATCH DIRECTIVE: ${domainName.toUpperCase()} DEVIATION DETECTED`;
+    ? `CRITICAL CONTINGENCY: ${domainName.toUpperCase()} PROTOCOL ACTIVATED`
+    : `WATCH DIRECTIVE: ${domainName.toUpperCase()} DEVIATION DETECTED`;
   if (headlineEl) headlineEl.textContent = headline;
 
   // Fetch tiered action text from config
@@ -807,14 +807,14 @@ function renderHealthIntelligenceView(a) {
         .map(
           (c) => `
         <div class="rule-item">
-          <div class="rule-title">⚠️ Cross-Domain Synergy: ${C.domains[c.domain]}</div>
+          <div class="rule-title">Cross-Domain Synergy: ${C.domains[c.domain]}</div>
           <p style="margin:4px 0 0;font-size:0.85rem">${c.text}</p>
         </div>
       `
         )
         .join("");
     } else {
-      rulesListEl.innerHTML = `<div class="rule-item" style="border-left-color:var(--status-ok)"><span style="color:var(--status-ok)">✓ All physiological domains operating within nominal baseline parameters. No cross-domain alert patterns active.</span></div>`;
+      rulesListEl.innerHTML = `<div class="rule-item" style="border-left-color:var(--status-ok)"><span style="color:var(--status-ok)">● All physiological domains operating within nominal baseline parameters. No cross-domain alert patterns active.</span></div>`;
     }
   }
 
@@ -865,7 +865,7 @@ function renderSubsystems(a, t) {
   if (statusEl) {
     if (dailyDose > C.radiation.speDoseThreshold) {
       statusEl.className = "badge-status crit";
-      statusEl.textContent = "☢ ACTIVE SOLAR PARTICLE EVENT (SPE)";
+      statusEl.textContent = "ACTIVE SOLAR PARTICLE EVENT (SPE)";
     } else {
       statusEl.className = "badge-status ok";
       statusEl.textContent = "Nominal GCR Background Exposure";
@@ -953,15 +953,15 @@ function setupTimelineScrubber() {
       if (timer) {
         clearInterval(timer);
         timer = null;
-        playBtn.textContent = "▶ Play Flight";
+        playBtn.textContent = "PLAY";
         return;
       }
-      playBtn.textContent = "⏸ Pause Flight";
+      playBtn.textContent = "PAUSE";
       timer = setInterval(() => {
         if (T >= N) {
           clearInterval(timer);
           timer = null;
-          playBtn.textContent = "▶ Play Flight";
+          playBtn.textContent = "PLAY";
           return;
         }
         T++;
@@ -1041,7 +1041,7 @@ function setupSyncHandlers() {
       if (pending.length === 0) {
         if (msg) msg.textContent = "Telemetry buffer up to date. Zero pending records.";
         btn.disabled = false;
-        btn.textContent = "📡 Transmit Telemetry to Ground Control";
+        btn.textContent = "Transmit Telemetry to Ground Control";
         return;
       }
 
@@ -1062,13 +1062,13 @@ function setupSyncHandlers() {
       }
 
       playChime();
-      if (msg) msg.textContent = serverAck ? `✓ Transmitted ${pending.length} telemetry records to Earth.` : `✓ Offline archive complete: ${pending.length} records processed.`;
+      if (msg) msg.textContent = serverAck ? `Telemetric downlink complete: ${pending.length} records transferred to Earth.` : `Offline archive complete: ${pending.length} records processed.`;
       await renderMissionDataStats();
     } catch (err) {
       if (msg) msg.textContent = `Transmission error: ${err.message}`;
     } finally {
       btn.disabled = false;
-      btn.textContent = "📡 Transmit Telemetry to Ground Control";
+      btn.textContent = "Transmit Telemetry to Ground Control";
     }
   });
 
@@ -1229,7 +1229,7 @@ function setupCheckinForm() {
     playXP();
     const fb = $("checkin-feedback");
     if (fb) {
-      fb.innerHTML = `<strong>✓ Day ${recordedDay} saved!</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
+      fb.innerHTML = `<strong>Day ${recordedDay} saved.</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
       setTimeout(() => (fb.innerHTML = ""), 6000);
     }
 
@@ -1290,8 +1290,8 @@ function showEduModal(dm) {
   const srcEl = $("edu-sources");
   if (srcEl) {
     const links = [];
-    if (edu.source) links.push(`<a href="${edu.source.url}" target="_blank" rel="noopener">📖 ${edu.source.label}</a>`);
-    if (edu.csaSource) links.push(`<a href="${edu.csaSource.url}" target="_blank" rel="noopener">🍁 ${edu.csaSource.label}</a>`);
+    if (edu.source) links.push(`<a href="${edu.source.url}" target="_blank" rel="noopener">NASA HRP: ${edu.source.label}</a>`);
+    if (edu.csaSource) links.push(`<a href="${edu.csaSource.url}" target="_blank" rel="noopener">CSA Space Health: ${edu.csaSource.label}</a>`);
     srcEl.innerHTML = links.length ? `<div class="edu-sources-label">Scientific Foundations</div>` + links.join("") : "";
   }
 
@@ -1345,7 +1345,7 @@ function render() {
   const banner = $("global-alert-banner");
   if (banner) {
     banner.innerHTML = a.spe
-      ? `☢ ACTIVE SOLAR PARTICLE EVENT (${a.spe.dose.toFixed(1)} mSv/day): Retreat to water-shielded storm shelter immediately and log occupancy duration.`
+      ? `ACTIVE SOLAR PARTICLE EVENT (${a.spe.dose.toFixed(1)} mSv/day): Retreat to water-shielded storm shelter immediately and log occupancy duration.`
       : "";
   }
 
@@ -1518,7 +1518,7 @@ async function init() {
       muteBtn.onclick = () => {
         const m = !isMuted();
         setMuted(m);
-        muteBtn.textContent = m ? "🔇" : "🔊";
+        muteBtn.textContent = m ? "MUTED" : "AUDIO";
       };
     }
 
@@ -1664,7 +1664,7 @@ async function init() {
       } finally {
         if (transmitBtn) {
           transmitBtn.disabled = false;
-          transmitBtn.textContent = "📡 TRANSMIT TO GROUND CONSOLE";
+          transmitBtn.textContent = "TRANSMIT TO GROUND CONSOLE";
         }
       }
     });
