@@ -1745,6 +1745,253 @@ async function init() {
     checkFastApiBackend();
     setInterval(checkFastApiBackend, 30000);
 
+    // ========================================================================
+    // PHASE D: WEARABLE HARDWARE GATEWAY & SUPABASE REALTIME CONTROLLER
+    // ========================================================================
+    let autoStreamInterval = null;
+    let streamPacketCount = 0;
+
+    async function checkSupabaseStatus() {
+      const pill = $("header-supabase-pill");
+      const label = $("supabase-status-label");
+      const badge = $("supabase-connection-badge");
+      try {
+        const res = await fetch(`${FASTAPI_BASE}/supabase/status`, { signal: AbortSignal.timeout(2500) });
+        if (res.ok) {
+          const data = await res.json();
+          const isConn = data.online === true || data.status === "CONNECTED";
+          if (pill) pill.className = isConn ? "header-pill status-ok" : "header-pill status-delay";
+          if (label) label.textContent = isConn ? "Supabase Cloud" : "Supabase Offline";
+          if (badge) {
+            badge.textContent = isConn ? "CONNECTED" : "OFFLINE BUFFERING";
+            badge.style.background = isConn ? "rgba(52,211,153,0.15)" : "rgba(245,158,11,0.15)";
+            badge.style.color = isConn ? "#34d399" : "#fbbf24";
+            badge.style.borderColor = isConn ? "#34d399" : "#fbbf24";
+          }
+          return;
+        }
+      } catch (e) {
+        if (pill) pill.className = "header-pill status-delay";
+        if (label) label.textContent = "Supabase Buffering";
+        if (badge) {
+          badge.textContent = "OFFLINE BUFFERING";
+          badge.style.background = "rgba(245,158,11,0.15)";
+          badge.style.color = "#fbbf24";
+          badge.style.borderColor = "#fbbf24";
+        }
+      }
+    }
+
+    async function renderWearablesPanel() {
+      const grid = $("wearable-devices-grid");
+      if (!grid) return;
+
+      checkSupabaseStatus();
+
+      let devices = [];
+      try {
+        const res = await fetch(`${FASTAPI_BASE}/devices`, { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          devices = await res.json();
+        }
+      } catch (e) {
+        // Fallback default devices
+        devices = [
+          {
+            device_id: "ASTRO-BIO-01",
+            astronaut_id: currentAstronaut.id,
+            device_name: "BioSticker Patch #01 (Commander)",
+            device_type: "bio_patch",
+            protocol: "BLE",
+            connection_state: "CONNECTED",
+            battery_level: 94,
+            signal_quality: 0.98,
+            transmission_frequency_hz: 1.0,
+            supported_metrics: ["hr", "hrv", "spo2", "temp", "ex"],
+            sync_status: "SYNCHRONIZED"
+          },
+          {
+            device_id: "ASTRO-GARMENT-02",
+            astronaut_id: "ASTRO-2",
+            device_name: "AstroSkin Smart Garment #02 (CMO)",
+            device_type: "smart_garment",
+            protocol: "BLE",
+            connection_state: "CONNECTED",
+            battery_level: 88,
+            signal_quality: 0.95,
+            transmission_frequency_hz: 1.0,
+            supported_metrics: ["hr", "hrv", "spo2", "temp", "sbp", "dbp", "ex"],
+            sync_status: "SYNCHRONIZED"
+          },
+          {
+            device_id: "ASTRO-RING-03",
+            astronaut_id: "ASTRO-3",
+            device_name: "Crew Circadian Ring #03 (Engineer)",
+            device_type: "smart_ring",
+            protocol: "BLE",
+            connection_state: "CONNECTED",
+            battery_level: 91,
+            signal_quality: 0.92,
+            transmission_frequency_hz: 0.2,
+            supported_metrics: ["hr", "hrv", "temp", "slp"],
+            sync_status: "SYNCHRONIZED"
+          }
+        ];
+      }
+
+      grid.innerHTML = devices.map(d => {
+        const isConn = d.connection_state === "CONNECTED";
+        const stateColor = isConn ? "var(--cyan)" : d.connection_state === "DATA_STALE" ? "var(--amber)" : "#ef4444";
+        return `
+          <div class="card-panel" style="padding:16px;background:var(--bg-card-sec);border-top:3px solid ${stateColor};">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+              <div>
+                <strong style="font-size:0.95rem;color:#fff;">${d.device_name}</strong>
+                <div class="mu" style="font-size:0.75rem;font-family:var(--font-mono)">ID: ${d.device_id} · Protocol: ${d.protocol}</div>
+              </div>
+              <span class="status-badge" style="background:rgba(54,230,208,0.1);color:${stateColor};border-color:${stateColor};font-size:0.7rem;">
+                ● ${d.connection_state}
+              </span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-size:0.8rem;">
+              <div><span class="mu">Assigned:</span> <strong style="color:var(--cyan)">${d.astronaut_id}</strong></div>
+              <div><span class="mu">Battery:</span> <strong style="color:${d.battery_level > 20 ? '#34d399' : '#ef4444'}">${d.battery_level}%</strong></div>
+              <div><span class="mu">Signal Quality:</span> <strong>${Math.round(d.signal_quality * 100)}%</strong></div>
+              <div><span class="mu">Frequency:</span> <strong>${d.transmission_frequency_hz} Hz</strong></div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <span class="mu" style="font-size:0.75rem">Sensors:</span>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+                ${d.supported_metrics.map(m => `<span style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:3px;font-size:0.7rem;font-family:var(--font-mono);">${m.toUpperCase()}</span>`).join("")}
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border-subtle);padding-top:10px;">
+              ${isConn ? 
+                `<button class="header-action-btn danger btn-dev-disconnect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Disconnect</button>` : 
+                `<button class="header-action-btn primary btn-dev-connect" data-id="${d.device_id}" style="font-size:0.75rem;padding:4px 8px;">Connect</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Bind connect/disconnect buttons
+      grid.querySelectorAll(".btn-dev-connect").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          await fetch(`${FASTAPI_BASE}/devices/${id}/connect`, { method: "POST" });
+          renderWearablesPanel();
+        });
+      });
+
+      grid.querySelectorAll(".btn-dev-disconnect").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          await fetch(`${FASTAPI_BASE}/devices/${id}/disconnect`, { method: "POST" });
+          renderWearablesPanel();
+        });
+      });
+    }
+
+    async function emitWearableTelemetry(mode = "nominal") {
+      const feedback = $("inject-feedback");
+      const consoleEl = $("wearable-stream-console");
+      const countEl = $("stream-count-badge");
+
+      if (feedback) feedback.textContent = "Transmitting sensor packet to ASTRA Gateway...";
+
+      try {
+        const res = await fetch(`${FASTAPI_BASE}/devices/ASTRO-BIO-01/simulate-packet?mode=${mode}`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          streamPacketCount += (data.packets_emitted || 4);
+          if (countEl) countEl.textContent = `${streamPacketCount} packets ingested`;
+
+          const processed = data.processed || [];
+          const lines = processed.map(p => {
+            const norm = p.normalized || {};
+            const st = p.storage || {};
+            const supSynced = st.supabase_synced ? "CLOUD_SYNCED" : "LOCAL_BUFFERED";
+            return `[${norm.timestamp?.slice(11,19) || 'LIVE'}] DEV:${norm.device_id} | ${norm.metric_name?.toUpperCase()}: ${norm.metric_value} ${norm.unit} (Qual: ${norm.signal_quality}) -> ${supSynced} | Tier: ${p.analysis?.tier}`;
+          }).join("\n");
+
+          if (consoleEl) {
+            consoleEl.textContent = lines + "\n" + consoleEl.textContent.slice(0, 800);
+          }
+
+          if (feedback) {
+            const hasAlert = processed.some(p => p.alert);
+            feedback.innerHTML = hasAlert ? 
+              `<span style="color:#f87171">⚠️ ALERT GENERATED: Abnormal reading detected & analyzed</span>` : 
+              `<span style="color:#34d399">✔ Telemetry normalized, stored in Supabase/local, and baseline-analyzed</span>`;
+          }
+
+          // Dynamically update the Overview & Live Physiology cards!
+          for (const item of processed) {
+            const norm = item.normalized;
+            if (norm) {
+              if (norm.metric_name === "hr" && $("live-hr")) {
+                $("live-hr").textContent = Math.round(norm.metric_value);
+              }
+              if (norm.metric_name === "spo2" && $("live-spo2")) {
+                $("live-spo2").textContent = norm.metric_value.toFixed(1);
+              }
+              if (norm.metric_name === "temp" && $("live-temp")) {
+                $("live-temp").textContent = norm.metric_value.toFixed(2);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = "Gateway error: " + err.message;
+      }
+    }
+
+    $("btn-refresh-devices")?.addEventListener("click", () => renderWearablesPanel());
+    $("btn-inject-packet")?.addEventListener("click", () => {
+      const mode = $("select-sim-mode")?.value || "nominal";
+      emitWearableTelemetry(mode);
+    });
+
+    $("btn-toggle-auto-stream")?.addEventListener("click", () => {
+      const btn = $("btn-toggle-auto-stream");
+      if (autoStreamInterval) {
+        clearInterval(autoStreamInterval);
+        autoStreamInterval = null;
+        if (btn) {
+          btn.textContent = "▶ Start Auto-Stream (1Hz)";
+          btn.classList.remove("danger");
+        }
+      } else {
+        const mode = $("select-sim-mode")?.value || "nominal";
+        emitWearableTelemetry(mode);
+        autoStreamInterval = setInterval(() => {
+          const currentMode = $("select-sim-mode")?.value || "nominal";
+          emitWearableTelemetry(currentMode);
+        }, 1000);
+        if (btn) {
+          btn.textContent = "⏹ Stop Auto-Stream";
+          btn.classList.add("danger");
+        }
+      }
+    });
+
+    // Check Supabase & Wearables on boot
+    checkSupabaseStatus();
+
+    // Hook renderWearablesPanel into tab switching
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const tab = item.getAttribute("data-tab");
+        if (tab === "tab-wearables") {
+          renderWearablesPanel();
+        }
+      });
+    });
+
     // Initial Master Render
     render();
 

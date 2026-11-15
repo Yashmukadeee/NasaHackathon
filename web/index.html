@@ -60,6 +60,7 @@
     <!-- ============================================================
        TOP AEROSPACE NAVIGATION BAR (Minimal, Focused)
        ============================================================ -->
+
     <header class="app-header">
       <div class="header-inner">
         <div class="header-left">
@@ -102,10 +103,20 @@
             <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
           </div>
 
-          <!-- Essential Utilities -->
-          <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">GROUND ALERT</button>
-          <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">CREW</button>
-          <button id="mute-toggle-btn" class="header-action-btn" title="Toggle Audio Alarms">AUDIO</button>
+        <div class="header-pill status-ok" id="header-supabase-pill" title="Supabase Cloud Database & Realtime">
+          <span class="pill-dot"></span>
+          <span id="supabase-status-label">Supabase Cloud</span>
+        </div>
+
+        <div class="header-pill status-ok" id="header-wearable-pill" title="Astronaut Wearable Hardware Gateway">
+          <span class="pill-dot"></span>
+          <span id="wearable-status-label">BLE Gateway</span>
+        </div>
+
+        <!-- Essential Utilities -->
+        <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">GROUND ALERT</button>
+        <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">CREW</button>
+        <button id="mute-toggle-btn" class="header-action-btn" title="Toggle Audio Alarms">AUDIO</button>
         </div>
       </div>
     </header>
@@ -598,7 +609,107 @@
         </section>
       </div>
 
-      <!-- Scientific Research Footer -->
+      <!-- ============================================================
+           TAB 11: SETTINGS (Part 16)
+           ============================================================ -->
+      <div id="tab-settings" class="view-panel">
+        <section class="card-panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-tag">MISSION CONFIGURATION</span>
+              <h3>CREW ROSTER & OPERATIONAL PARAMETERS</h3>
+            </div>
+            <span class="header-pill status-ok">Ares Transit Profile</span>
+          </div>
+
+          <h4 style="margin:16px 0 8px">SELECT ACTIVE CREW MEMBER PROFILE</h4>
+          <div class="astronaut-select-grid" id="astro-select-grid"></div>
+
+          <h4 style="margin:24px 0 8px">AUDIO ALERTS & PREFERENCES</h4>
+          <div class="settings-toggle-row">
+            <label class="layer-toggle"><input type="checkbox" id="setting-sound-alerts" checked> Enable Synthesized Web Audio Bio-Pings</label>
+          </div>
+
+          <h4 style="margin:24px 0 8px">DIAGNOSTIC RE-SEED & CACHE MANAGEMENT</h4>
+          <p class="mu">Resets local IndexedDB telemetry to the 180-day benchmark flight dataset without deleting user check-ins.</p>
+          <button id="btn-reseed-db" class="header-action-btn">🔄 Diagnostic Re-seed from Benchmark Dataset</button>
+          <span id="reseed-feedback" class="mu" style="margin-left:12px"></span>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 12: WEARABLE DEVICE MONITORING PANEL & GATEWAY (Phase D)
+           ============================================================ -->
+      <div id="tab-wearables" class="view-panel">
+        <div class="panel-header">
+          <div>
+            <h2>⌚ Astronaut Wearable Hardware Gateway & Supabase Realtime</h2>
+            <p class="panel-sub">Real-time Bluetooth Low Energy (BLE 5.0+) smart garments, clinical biosensor patches, and cloud database synchronization.</p>
+          </div>
+          <div class="panel-actions">
+            <span class="status-badge" id="wearable-overall-badge">● 3 DEVICES PAIRED</span>
+            <button id="btn-refresh-devices" class="header-action-btn">🔄 Refresh Gateway</button>
+          </div>
+        </div>
+
+        <!-- Supabase Cloud Sync Status Banner -->
+        <div class="card-panel" style="margin-bottom:20px;border-left:4px solid var(--cyan);display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h4 style="margin:0 0 4px;color:var(--cyan)">☁️ Supabase PostgreSQL & Realtime Status</h4>
+            <div id="supabase-banner-details" class="mu" style="font-size:0.8rem">
+              Endpoint: <code>https://cboiwmazdwworsyviimc.supabase.co</code> · Database: PostgreSQL 14 · Auth: Service Role Guarded
+            </div>
+          </div>
+          <div style="text-align:right">
+            <span class="status-badge" id="supabase-connection-badge" style="background:rgba(52,211,153,0.15);color:#34d399;border-color:#34d399">CONNECTED</span>
+            <div class="mu" style="font-size:0.75rem;margin-top:4px">Realtime RLS Active</div>
+          </div>
+        </div>
+
+        <!-- Wearable Devices Cards Grid -->
+        <h3 style="margin-bottom:12px">PAIRED CREW HARDWARE</h3>
+        <div class="grid-3" id="wearable-devices-grid">
+          <!-- Populated dynamically via app.js -->
+        </div>
+
+        <!-- Live Ingestion & Hardware Emulation Lab -->
+        <div class="grid-2" style="margin-top:24px;">
+          <!-- Emulation & Injection Controls -->
+          <div class="card-panel">
+            <h3>🔬 Hardware Gateway Testing Lab</h3>
+            <p class="mu" style="font-size:0.8rem">Inject real-time physiological telemetry packets through the 14-step normalization and CDSS analytics pipeline.</p>
+            
+            <div style="margin:16px 0;display:flex;gap:10px;align-items:center;">
+              <label for="select-sim-mode" style="font-size:0.8rem;color:var(--text-sec);font-weight:600">Simulate State:</label>
+              <select id="select-sim-mode" class="header-action-btn" style="padding:6px 12px;background:var(--bg-card-sec);color:var(--text-main);">
+                <option value="nominal">Nominal Resting (Normal Baseline)</option>
+                <option value="fever">Acute Viral Fever (Temp 38.5°C, HR 90+ bpm)</option>
+                <option value="hypoxia">Cabin Hypoxia (SpO2 89%, Tachycardia)</option>
+                <option value="arrhythmia">Cardiac Arrhythmia / HRV Drop</option>
+              </select>
+            </div>
+
+            <div style="display:flex;gap:10px;">
+              <button id="btn-inject-packet" class="header-action-btn primary">⚡ Emit Wearable Packet</button>
+              <button id="btn-toggle-auto-stream" class="header-action-btn">▶ Start Auto-Stream (1Hz)</button>
+            </div>
+
+            <div id="inject-feedback" style="margin-top:12px;font-size:0.8rem;font-family:var(--font-mono);min-height:24px;"></div>
+          </div>
+
+          <!-- Real-Time Stream Monitor Console -->
+          <div class="card-panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <h3>📡 Real-Time Telemetry Stream Log</h3>
+              <span class="mu" style="font-size:0.75rem" id="stream-count-badge">0 packets</span>
+            </div>
+            <pre id="wearable-stream-console" class="telemetry-pre" style="max-height:220px;font-size:0.75rem;background:#050b11;border:1px solid var(--border-subtle);"></pre>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Scientific Research Alignment Footer -->
       <footer class="app-footer">
         <div class="footer-inner">
           <div class="footer-col">

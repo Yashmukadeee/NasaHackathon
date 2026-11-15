@@ -128,6 +128,7 @@ _ROUTER_IMPORTS = [
     ("app.routers.radiation", "router"),
     ("app.routers.ground_team", "router"),
     ("app.routers.mission", "router"),
+    ("app.routers.devices", "router"),
 ]
 
 for _module_path, _attr in _ROUTER_IMPORTS:
@@ -161,3 +162,10 @@ async def status():
 @app.get("/api/v1/health", tags=["meta"])
 async def health():
     return {"status": "healthy", "database": "connected"}
+
+
+@app.get("/api/v1/supabase/status", tags=["meta"])
+async def supabase_status():
+    from app.services.supabase_service import supabase_service
+    conn_info = await supabase_service.check_connection()
+    return conn_info

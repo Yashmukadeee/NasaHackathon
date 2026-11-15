@@ -124,3 +124,54 @@ async def batch_sync_telemetry(batch: TelemetryBatchSync, db: AsyncSession = Dep
 
     await db.commit()
     return {"success": True, "synced_total": len(batch.records), "created": created, "updated": updated}
+
+
+# ---------------------------------------------------------------------------
+# Real-Time Wearable Telemetry Ingestion (Phase D)
+# ---------------------------------------------------------------------------
+
+@router.post("/ingest")
+async def ingest_wearable_telemetry(payload: dict, db: AsyncSession = Depends(get_db)):
+    """
+    Ingest a single real-time sensor reading from an astronaut wearable device.
+    Executes the 14-step normalization, Supabase storage, and CDSS pipeline.
+    """
+    from app.services.realtime_pipeline import realtime_pipeline
+    result = await realtime_pipeline.ingest_and_process(payload, db=db)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Ingestion failed"))
+    return result
+
+
+@router.get("/live/{astronaut_id}")
+async def get_live_telemetry(astronaut_id: str):
+    """
+    Get the most recent real-time wearable readings and signal qualities for an astronaut.
+    """
+    from app.services.realtime_pipeline import realtime_pipeline
+    live_data = realtime_pipeline.live_telemetry_cache.get(astronaut_id, {})
+    flat_readings = {
+        k: (v.get("metric_value", v) if isinstance(v, dict) else v)
+        for k, v in live_data.items()
+    }
+    return {
+        "astronaut_id": astronaut_id,
+        "readings": flat_readings,
+        "details": live_data,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "is_live": len(flat_readings) > 0,
+    }
+
+
+@router.get("/history/{astronaut_id}")
+async def get_telemetry_history_stream(astronaut_id: str, limit: int = Query(50, ge=1, le=500)):
+    """
+    Get the sequential real-time stream buffer for an astronaut's connected wearables.
+    """
+    from app.services.realtime_pipeline import realtime_pipeline
+    stream = realtime_pipeline.recent_stream_buffer.get(astronaut_id, [])
+    return {
+        "astronaut_id": astronaut_id,
+        "count": len(stream[-limit:]),
+        "stream": stream[-limit:],
+    }

@@ -6,6 +6,7 @@ from app.routers.alerts import router as alerts_router
 from app.routers.radiation import router as radiation_router
 from app.routers.ground_team import router as ground_team_router
 from app.routers.mission import router as mission_router
+from app.routers.devices import router as devices_router
 
 __all__ = [
     "astronauts_router",
@@ -16,4 +17,5 @@ __all__ = [
     "radiation_router",
     "ground_team_router",
     "mission_router",
+    "devices_router",
 ]
