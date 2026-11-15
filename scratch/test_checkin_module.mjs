@@ -74,17 +74,13 @@ async function run() {
       dayInp.value = 45;
       dayInp.dispatchEvent(new Event('change'));
     }
-    // Set manual inputs: High Stress, High Fatigue, Low Sleep, Headache, High BP
+    // Set manual inputs: High Stress, High Fatigue, Low Sleep
     const fatInp = document.getElementById('ci-fat');
     if (fatInp) { fatInp.value = 8.5; fatInp.dispatchEvent(new Event('input')); }
     const stressInp = document.getElementById('ci-stress');
     if (stressInp) { stressInp.value = 8.0; stressInp.dispatchEvent(new Event('input')); }
     const slpInp = document.getElementById('ci-slp');
     if (slpInp) { slpInp.value = 4.2; slpInp.dispatchEvent(new Event('input')); }
-    const sbpInp = document.getElementById('ci-sbp');
-    if (sbpInp) { sbpInp.value = 138; sbpInp.dispatchEvent(new Event('input')); }
-    const dbpInp = document.getElementById('ci-dbp');
-    if (dbpInp) { dbpInp.value = 92; dbpInp.dispatchEvent(new Event('input')); }
 
     const chkHeadache = document.querySelector('input[name="symptom"][value="Headache / ICP Elevation"]');
     if (chkHeadache) chkHeadache.checked = true;

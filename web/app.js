@@ -69,21 +69,19 @@ const ALL_METRICS_KEYS = [
 ];
 
 // Check-in form fields covering ONLY manually inputted astronaut parameters
-// (Automated sensors: HR, HRV, SpO2, Core Temp, Cabin CO2, Dosimeter are streamed via ASTRA Device Gateway)
+// (Automated sensors: HR, HRV, SpO2, SBP, DBP, Core Temp, Cabin CO2, Dosimeter are streamed via ASTRA Device Gateway)
 const CHECKIN_FIELDS = [
   // Subjective & Cognitive Wellness (7 metrics)
   { k: "mood", cat: "subjective", icon: "🧠", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10", desc: "Self-assessed cognitive affect & morale" },
   { k: "stress", cat: "subjective", icon: "⚡", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived cognitive & mission workload" },
   { k: "fat", cat: "subjective", icon: "🔋", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived neuromuscular exhaustion" },
   { k: "slp", cat: "subjective", icon: "🌙", label: "Sleep Duration", min: 0, max: 12, step: 0.5, unit: "h", desc: "Restorative sleep logged" },
-  { k: "headache", cat: "subjective", icon: "🤕", label: "Headache / ICP", min: 0, max: 10, step: 1, unit: "/10", desc: "Cephalad fluid shift & cranial pressure" },
+  { k: "headache", cat: "subjective", icon: "🤕", label: "Headache / Space Adaptation", min: 0, max: 10, step: 1, unit: "/10", desc: "Cephalad fluid shift & cranial pressure" },
   { k: "hydration", cat: "subjective", icon: "💧", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl", desc: "Electrolyte fluid packs consumed" },
   { k: "nutrition", cat: "subjective", icon: "🥗", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10", desc: "Caloric intake & dietary adherence" },
 
-  // Manual Vitals Cuff & Physical Countermeasures (4 metrics)
-  { k: "sbp", cat: "physical", icon: "🩸", label: "Systolic Blood Pressure", min: 80, max: 200, step: 1, unit: "mmHg", desc: "Manual cuff arterial measurement" },
-  { k: "dbp", cat: "physical", icon: "🩺", label: "Diastolic Blood Pressure", min: 50, max: 130, step: 1, unit: "mmHg", desc: "Manual cuff resting measurement" },
-  { k: "ex", cat: "physical", icon: "🏋️", label: "Resistive Exercise (ARED)", min: 0, max: 180, step: 5, unit: "min", desc: "Daily ARED / cycle workout duration" },
+  // Physical Activity & Motor Function (2 metrics)
+  { k: "ex", cat: "physical", icon: "🏋️", label: "Resistive Exercise (ARED)", min: 0, max: 180, step: 5, unit: "min", desc: "Daily ARED / cycle workout duration logged" },
   { k: "grip", cat: "physical", icon: "✊", label: "Grip Dynamometry", min: 10, max: 80, step: 1, unit: "kg", desc: "Physical hand dynamometer test score" },
 ];
 
@@ -1331,35 +1329,35 @@ function setupCheckinForm() {
   $("preset-nominal")?.addEventListener("click", () => {
     applyCheckinPreset({
       mood: 8, stress: 2, fat: 2, slp: 8.0, headache: 0, hydration: 10, nutrition: 8,
-      sbp: 118, dbp: 76, ex: 60, grip: 45,
+      ex: 60, grip: 45,
     }, ["None"], "Nominal Baseline");
   });
 
   $("preset-fatigued")?.addEventListener("click", () => {
     applyCheckinPreset({
       mood: 6, stress: 5, fat: 8, slp: 5.5, headache: 3, hydration: 6, nutrition: 6,
-      sbp: 126, dbp: 82, ex: 90, grip: 38,
+      ex: 90, grip: 38,
     }, ["Fatigue", "BackPain"], "Post-EVA Fatigue");
   });
 
   $("preset-stress")?.addEventListener("click", () => {
     applyCheckinPreset({
       mood: 4, stress: 8, fat: 7, slp: 4.5, headache: 6, hydration: 5, nutrition: 5,
-      sbp: 136, dbp: 88, ex: 25, grip: 40,
+      ex: 25, grip: 40,
     }, ["Headache", "Fatigue"], "High Workload & Stress");
   });
 
   $("preset-fever")?.addEventListener("click", () => {
     applyCheckinPreset({
       mood: 3, stress: 6, fat: 9, slp: 5.0, headache: 7, hydration: 5, nutrition: 4,
-      sbp: 128, dbp: 84, ex: 0, grip: 32,
+      ex: 0, grip: 32,
     }, ["Fatigue", "Headache", "Nausea"], "Symptomatic Malaise");
   });
 
   $("preset-co2")?.addEventListener("click", () => {
     applyCheckinPreset({
       mood: 4, stress: 6, fat: 6, slp: 5.5, headache: 8, hydration: 8, nutrition: 7,
-      sbp: 138, dbp: 88, ex: 45, grip: 42,
+      ex: 45, grip: 42,
     }, ["Headache", "EyeIrritation"], "Cephalad / SANS Pressure");
   });
 
@@ -2402,9 +2400,16 @@ async function init() {
     // Initial Master Render
     render();
 
-    // Register Service Worker
+    // Flush any stale Service Worker and browser cache to ensure live dev updates
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => { });
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) reg.unregister();
+      });
+    }
+    if ("caches" in window) {
+      caches.keys().then((ks) => {
+        for (const k of ks) caches.delete(k);
+      });
     }
   } catch (err) {
     console.error("[ASTRA] Application boot error:", err);

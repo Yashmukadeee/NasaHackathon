@@ -286,8 +286,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       "Content-Type": contentType,
       "Content-Length": stats.size,
-      // Always revalidate so reloads pick up new HTML/CSS/JS instead of a stale cached copy.
-      "Cache-Control": "no-cache, must-revalidate",
+      // Aggressively disable caching so local reloads ALWAYS get fresh code
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      "Pragma": "no-cache",
+      "Expires": "0",
     });
 
     const stream = fs.createReadStream(filePath);
