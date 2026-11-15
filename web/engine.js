@@ -10,10 +10,11 @@ const std = (a, m) => Math.sqrt(a.reduce((p, c) => p + (c - m) ** 2, 0) / a.leng
 
 /** Build baselines, EWMA drift series and cumulative dose for a mission. */
 export function prepare(series, cfg = CONFIG) {
+  const totalDays = Math.max(cfg.days, ...Object.values(series).map((s) => (Array.isArray(s) ? s.length : 0)));
   const base = {}, drift = {};
   for (const k in cfg.metrics) {
     if (!series[k]) {
-      series[k] = new Array(cfg.days).fill(null);
+      series[k] = new Array(totalDays).fill(null);
     }
     const vals = [];
     for (let d = cfg.baseline.start; d <= cfg.baseline.end; d++) {
@@ -25,7 +26,7 @@ export function prepare(series, cfg = CONFIG) {
     base[k] = { mean: m, sd: s };
     let e = 0;
     drift[k] = [];
-    for (let d = 1; d <= cfg.days; d++) {
+    for (let d = 1; d <= totalDays; d++) {
       const v = series[k][d - 1];
       if (v != null && d >= cfg.baseline.start) {
         const z = clamp(((v - m) / s) * cfg.metrics[k].dir, -6, 6);
@@ -36,11 +37,11 @@ export function prepare(series, cfg = CONFIG) {
   }
   const cum = [];
   let c = 0;
-  for (let d = 1; d <= cfg.days; d++) {
+  for (let d = 1; d <= totalDays; d++) {
     c += series.dose[d - 1] ?? base.dose.mean; // gap in dosimeter: assume baseline rate
     cum.push(c);
   }
-  return { series, base, drift, cum, cfg };
+  return { series, base, drift, cum, cfg, days: totalDays };
 }
 
 const driftAt = (ctx, k, d) => ctx.drift[k][d - 1];
@@ -132,7 +133,7 @@ export function analyze(ctx, t) {
     day: t, adapting, domains, contributors, forecast: adapting ? null : forecast(ctx, t),
     overall: { status: adapting ? LEARNING : worst, tier, worstDomain },
     spe: speNow ? { day: speNow, dose: ctx.series.dose[speNow - 1] } : null,
-    cumDose: ctx.cum[t - 1],
+    cumDose: ctx.cum[t - 1] ?? (ctx.cum[ctx.cum.length - 1] || 0),
   };
 }
 
@@ -161,7 +162,7 @@ export function reasonLines(ctx, a, dm, max = 3) {
 /** Plain-text summary an astronaut can send to ground. */
 export function groundSummary(ctx, t) {
   const cfg = ctx.cfg, a = analyze(ctx, t), L = ["Normal", "Watch", "Act"];
-  let s = `MISSION VITALS GROUND SUMMARY (simulated data)\nMission day ${t} of ${cfg.days}. Escalation tier: ${a.overall.tier}\n\n`;
+  let s = `MISSION VITALS GROUND SUMMARY (simulated data)\nMission day ${t} of ${ctx.days || cfg.days}. Escalation tier: ${a.overall.tier}\n\n`;
   for (const dm in cfg.domains) {
     const st = a.domains[dm].status;
     s += `${cfg.domains[dm]}: ${st === LEARNING ? "Learning baseline" : L[st]}\n`;

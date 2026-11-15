@@ -27,6 +27,7 @@ import {
   getTelemetry,
   getTelemetryRange,
   saveCheckIn,
+  getCheckIn,
   getCheckIns,
   saveAlert,
   getAlerts,
@@ -50,7 +51,7 @@ const cls = (s) => (s === LEARNING ? "sm" : s === 0 ? "ok" : s === 1 ? "warn" : 
 // ── Application State ────────────────────────────────────────────────────────
 let mission = null;
 let ctx = null;
-let T = 30; // Current Mission Day (1–180)
+let T = 30; // Current Mission Day (1–180+)
 let SEL = "car"; // Selected Anatomical / Clinical Domain
 let timer = null; // Timeline animation timer
 let prevStatus = null; // Audio alert state tracker
@@ -67,17 +68,30 @@ const ALL_METRICS_KEYS = [
   "headache", "co2", "dose"
 ];
 
-// Check-in form fields with clear categories and clean aerospace styling
+// Check-in form fields covering all 17 clinical, subjective & environmental parameters
 const CHECKIN_FIELDS = [
-  { k: "mood", icon: "", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10" },
-  { k: "stress", icon: "", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10" },
-  { k: "fat", icon: "", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10" },
-  { k: "slp", icon: "", label: "Sleep Rested", min: 0, max: 12, step: 0.5, unit: "h" },
-  { k: "hydration", icon: "", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl" },
-  { k: "nutrition", icon: "", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10" },
-  { k: "headache", icon: "", label: "Headache / Pressure", min: 0, max: 10, step: 1, unit: "/10" },
-  { k: "sbp", icon: "", label: "Systolic BP", min: 90, max: 180, step: 1, unit: "mmHg" },
-  { k: "dbp", icon: "", label: "Diastolic BP", min: 60, max: 120, step: 1, unit: "mmHg" },
+  // Subjective & Cognitive Wellness (7 metrics)
+  { k: "mood", cat: "subjective", icon: "🧠", label: "Subjective Mood", min: 0, max: 10, step: 1, unit: "/10", desc: "Mental affect & cognitive morale" },
+  { k: "stress", cat: "subjective", icon: "⚡", label: "Workload Stress", min: 0, max: 10, step: 1, unit: "/10", desc: "Perceived cognitive workload" },
+  { k: "fat", cat: "subjective", icon: "🔋", label: "Physical Fatigue", min: 0, max: 10, step: 1, unit: "/10", desc: "Neuromuscular exhaustion" },
+  { k: "slp", cat: "subjective", icon: "🌙", label: "Sleep Duration", min: 0, max: 12, step: 0.5, unit: "h", desc: "Restorative sleep logged" },
+  { k: "headache", cat: "subjective", icon: "🤕", label: "Headache / ICP", min: 0, max: 10, step: 1, unit: "/10", desc: "Cranial pressure & fluid shift" },
+  { k: "hydration", cat: "subjective", icon: "💧", label: "Hydration Intake", min: 0, max: 15, step: 1, unit: "gl", desc: "Electrolyte packs logged" },
+  { k: "nutrition", cat: "subjective", icon: "🥗", label: "Nutrition Quality", min: 0, max: 10, step: 1, unit: "/10", desc: "Caloric & dietary compliance" },
+
+  // Cardiovascular & Clinical Vitals (6 metrics)
+  { k: "hr", cat: "vitals", icon: "❤️", label: "Resting Heart Rate", min: 40, max: 180, step: 1, unit: "bpm", desc: "Basal cardiovascular pulse" },
+  { k: "hrv", cat: "vitals", icon: "💓", label: "Heart Rate Var (HRV)", min: 10, max: 160, step: 1, unit: "ms", desc: "Autonomic recovery tone" },
+  { k: "spo2", cat: "vitals", icon: "🫁", label: "Blood Oxygen SpO2", min: 80, max: 100, step: 0.5, unit: "%", desc: "Arterial oxygen saturation" },
+  { k: "sbp", cat: "vitals", icon: "🩸", label: "Systolic Blood Pressure", min: 80, max: 200, step: 1, unit: "mmHg", desc: "Peak systolic arterial pressure" },
+  { k: "dbp", cat: "vitals", icon: "🩺", label: "Diastolic Blood Pressure", min: 50, max: 130, step: 1, unit: "mmHg", desc: "Minimum resting diastolic pressure" },
+  { k: "temp", cat: "vitals", icon: "🌡️", label: "Core Body Temperature", min: 35.0, max: 41.0, step: 0.1, unit: "°C", desc: "Tympanic core thermoregulation" },
+
+  // Physical Performance & Habitat Environment (4 metrics)
+  { k: "ex", cat: "environment", icon: "🏋️", label: "Resistive Exercise (ARED)", min: 0, max: 180, step: 5, unit: "min", desc: "Musculoskeletal loading duration" },
+  { k: "grip", cat: "environment", icon: "✊", label: "Grip Dynamometry", min: 10, max: 80, step: 1, unit: "kg", desc: "Isometric forearm muscular strength" },
+  { k: "co2", cat: "environment", icon: "💨", label: "Cabin CO2 Partial Press", min: 0.5, max: 10.0, step: 0.1, unit: "mmHg", desc: "Habitat partial pressure of CO2" },
+  { k: "dose", cat: "environment", icon: "☢️", label: "Daily Radiation Dosimeter", min: 0.0, max: 25.0, step: 0.1, unit: "mSv", desc: "Active dosimeter rate per 24h" },
 ];
 
 // ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
@@ -1079,18 +1093,19 @@ function setupSyncHandlers() {
   });
 }
 
-// ── Daily Check-in Setup (Part 9 - Polished & User-Friendly) ─────────────────
+// ── Daily Check-in Setup & Autonomous CDSS Engine (Part 9) ───────────────────
 function setupCheckinForm() {
   const container = $("full-checkin-fields");
   if (!container) return;
 
-  container.innerHTML = CHECKIN_FIELDS.map(({ k, icon, label, min, max, step, unit }) => {
+  // 1. Render all 17 Clinical & Environmental Fields
+  container.innerHTML = CHECKIN_FIELDS.map(({ k, cat, icon, label, min, max, step, unit, desc }) => {
     const curVal = mission.series[k]
       ? (mission.series[k][T - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : min))
       : min;
 
     return `
-      <div class="field-wrap">
+      <div class="field-wrap checkin-field-card" data-category="${cat}">
         <div class="field-header-row">
           <div class="field-name-wrap">
             <span class="field-icon">${icon}</span>
@@ -1098,6 +1113,7 @@ function setupCheckinForm() {
           </div>
           <span class="field-value-badge" id="val_${k}">${curVal} ${unit}</span>
         </div>
+        <div class="field-desc">${desc}</div>
         <div class="field-controls-row">
           <button type="button" class="step-btn" data-step="-${step}" data-key="${k}">−</button>
           <input id="ci_${k}" class="field-slider" type="range" min="${min}" max="${max}" step="${step}" value="${curVal}">
@@ -1107,7 +1123,7 @@ function setupCheckinForm() {
     `;
   }).join("");
 
-  // Setup input live binding
+  // 2. Setup input live binding
   CHECKIN_FIELDS.forEach(({ k, unit }) => {
     const inp = $("ci_" + k);
     const val = $("val_" + k);
@@ -1118,7 +1134,7 @@ function setupCheckinForm() {
     }
   });
 
-  // Setup +/- Step Buttons
+  // 3. Setup +/- Step Buttons
   container.querySelectorAll(".step-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const k = btn.dataset.key;
@@ -1126,63 +1142,226 @@ function setupCheckinForm() {
       const inp = $("ci_" + k);
       const fieldDef = CHECKIN_FIELDS.find(f => f.k === k);
       if (inp && fieldDef) {
-        const next = Math.max(fieldDef.min, Math.min(fieldDef.max, Number(inp.value) + stepVal));
+        const precision = fieldDef.step < 1 ? 1 : 0;
+        const currentNum = Number(inp.value);
+        const next = Math.max(fieldDef.min, Math.min(fieldDef.max, +(currentNum + stepVal).toFixed(precision)));
         inp.value = next;
         inp.dispatchEvent(new Event("input"));
       }
     });
   });
 
-  // Quick Preset Handlers
-  $("preset-nominal")?.addEventListener("click", () => {
-    applyCheckinPreset({ mood: 8, stress: 2, fat: 2, slp: 8, sbp: 118, dbp: 76, hydration: 10, nutrition: 8, headache: 0 }, ["None"]);
-  });
-  $("preset-fatigued")?.addEventListener("click", () => {
-    applyCheckinPreset({ mood: 6, stress: 5, fat: 8, slp: 5.5, sbp: 124, dbp: 82, hydration: 6, nutrition: 6, headache: 3 }, ["Fatigue", "BackPain"]);
-  });
-  $("preset-stress")?.addEventListener("click", () => {
-    applyCheckinPreset({ mood: 4, stress: 8, fat: 6, slp: 6, sbp: 132, dbp: 88, hydration: 7, nutrition: 5, headache: 5 }, ["Headache", "Fatigue"]);
+  // 4. Category Filter Buttons (All / Subjective / Vitals / Environment)
+  document.querySelectorAll(".cat-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll(".cat-pill").forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+      const selectedCat = pill.dataset.cat;
+      document.querySelectorAll(".checkin-field-card").forEach((card) => {
+        if (selectedCat === "all" || card.dataset.category === selectedCat) {
+          card.style.display = "block";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    });
   });
 
-  function applyCheckinPreset(vals, symptomsList) {
+  // 5. Day Stepper & Loader Logic
+  async function loadCheckinDay(dayNum, isNewDayCreation = false) {
+    const curLen = mission?.series?.hr ? mission.series.hr.length : N;
+    const isNewDay = isNewDayCreation || dayNum > curLen;
+    const boundedDay = Math.max(1, dayNum);
+
+    const targetInp = $("checkin-target-day");
+    if (targetInp) {
+      targetInp.value = boundedDay;
+      targetInp.max = Math.max(180, curLen + 1);
+    }
+
+    const totalLabel = $("checkin-total-days-label");
+    if (totalLabel) {
+      totalLabel.textContent = `/ ${Math.max(180, isNewDay ? boundedDay : curLen)}`;
+    }
+
+    // Prev / Next button states
+    const prevBtn = $("checkin-prev-day");
+    if (prevBtn) prevBtn.disabled = boundedDay <= 1;
+
+    // Mode Banner Styling
+    const modeBanner = $("checkin-mode-banner");
+    const modeTitle = $("checkin-mode-title");
+    const modeDesc = $("checkin-mode-desc");
+    const modeStatus = $("checkin-record-status");
+
+    if (modeBanner && modeTitle && modeDesc && modeStatus) {
+      if (isNewDay) {
+        modeBanner.className = "checkin-mode-banner mode-new";
+        modeTitle.textContent = `LOGGING NEW MISSION DAY ${boundedDay}`;
+        modeDesc.textContent = `New flight day timeline entry. Adjust parameters below and submit to append Day ${boundedDay} to mission flight records and compute autonomous CDSS intelligence.`;
+        modeStatus.textContent = "➕ NEW FLIGHT RECORD";
+        modeStatus.style.borderColor = "var(--cyan)";
+        modeStatus.style.color = "var(--cyan)";
+      } else {
+        modeBanner.className = "checkin-mode-banner mode-edit";
+        modeTitle.textContent = `EDITING MISSION DAY ${boundedDay}`;
+        modeDesc.textContent = `Historical flight telemetry loaded for Mission Day ${boundedDay}. Modifying any parameter updates database records and cascades forward into CDSS drift analysis.`;
+        modeStatus.textContent = "📝 HISTORICAL RECORD";
+        modeStatus.style.borderColor = "var(--border-subtle)";
+        modeStatus.style.color = "var(--text-sec)";
+      }
+    }
+
+    // Populate Fields with Data for this Day
+    CHECKIN_FIELDS.forEach(({ k, unit, min }) => {
+      const inp = $("ci_" + k);
+      const valBadge = $("val_" + k);
+      if (inp) {
+        let valForDay;
+        if (isNewDay) {
+          // New day starts with previous day's telemetry or baseline mean
+          const prevDayIdx = Math.min(boundedDay - 2, curLen - 1);
+          valForDay = mission.series[k] ? (mission.series[k][prevDayIdx] ?? ctx.base[k]?.mean ?? min) : min;
+        } else {
+          valForDay = mission.series[k] ? (mission.series[k][boundedDay - 1] ?? ctx.base[k]?.mean ?? min) : min;
+        }
+        if (typeof valForDay === "number") {
+          valForDay = +valForDay.toFixed(k === "temp" || k === "dose" || k === "slp" ? 1 : 0);
+        }
+        inp.value = valForDay;
+        if (valBadge) valBadge.textContent = `${valForDay} ${unit}`;
+      }
+    });
+
+    // Populate Symptoms and Notes from IndexedDB
+    try {
+      const savedCheckin = await getCheckIn(currentAstronaut.id, boundedDay);
+      if (savedCheckin) {
+        const symptoms = savedCheckin.symptoms || [];
+        document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
+          cb.checked = symptoms.includes(cb.value);
+        });
+        if ($("checkin-notes")) $("checkin-notes").value = savedCheckin.notes || "";
+      } else {
+        document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
+          cb.checked = cb.value === "None";
+        });
+        if ($("checkin-notes")) $("checkin-notes").value = "";
+      }
+    } catch {
+      document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
+        cb.checked = cb.value === "None";
+      });
+      if ($("checkin-notes")) $("checkin-notes").value = "";
+    }
+  }
+
+  // Day Navigation Listeners
+  $("checkin-prev-day")?.addEventListener("click", () => {
+    const curVal = parseInt($("checkin-target-day")?.value || T, 10);
+    loadCheckinDay(Math.max(1, curVal - 1));
+  });
+
+  $("checkin-next-day")?.addEventListener("click", () => {
+    const curVal = parseInt($("checkin-target-day")?.value || T, 10);
+    loadCheckinDay(curVal + 1);
+  });
+
+  $("checkin-target-day")?.addEventListener("change", (e) => {
+    const val = parseInt(e.target.value, 10);
+    if (!isNaN(val) && val >= 1) {
+      loadCheckinDay(val);
+    }
+  });
+
+  $("btn-add-new-day")?.addEventListener("click", () => {
+    const curLen = mission?.series?.hr ? mission.series.hr.length : N;
+    const nextDay = curLen + 1;
+    loadCheckinDay(nextDay, true);
+    const fb = $("checkin-feedback");
+    if (fb) {
+      fb.innerHTML = `Ready to record <strong>New Mission Day ${nextDay}</strong>. Adjust values below and click submit.`;
+      setTimeout(() => (fb.innerHTML = ""), 6000);
+    }
+  });
+
+  $("btn-reset-checkin")?.addEventListener("click", () => {
+    const curVal = parseInt($("checkin-target-day")?.value || T, 10);
+    loadCheckinDay(curVal);
+    const fb = $("checkin-feedback");
+    if (fb) {
+      fb.innerHTML = `Day ${curVal} values reset to saved baseline.`;
+      setTimeout(() => (fb.innerHTML = ""), 3000);
+    }
+  });
+
+  // 6. Quick Biometric Preset Handlers
+  function applyCheckinPreset(vals, symptomsList, presetName) {
     for (const k in vals) {
       const inp = $("ci_" + k);
+      const valBadge = $("val_" + k);
+      const fieldDef = CHECKIN_FIELDS.find((f) => f.k === k);
       if (inp) {
         inp.value = vals[k];
-        inp.dispatchEvent(new Event("input"));
+        if (valBadge && fieldDef) valBadge.textContent = `${vals[k]} ${fieldDef.unit}`;
       }
     }
     document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
       cb.checked = symptomsList.includes(cb.value);
     });
+    const fb = $("checkin-feedback");
+    if (fb) {
+      fb.innerHTML = `Applied preset: <strong>${presetName}</strong>`;
+      setTimeout(() => (fb.innerHTML = ""), 4000);
+    }
   }
 
-  // Manual Check-in Target Day Selector
-  const checkinTargetDay = $("checkin-target-day");
-  if (checkinTargetDay) {
-    checkinTargetDay.addEventListener("change", (e) => {
-      const val = parseInt(e.target.value, 10);
-      const totalDays = Math.max(180, mission?.series?.hr ? mission.series.hr.length : 180);
-      if (!isNaN(val) && val >= 1 && val <= totalDays) {
-        T = val;
-        render();
-        CHECKIN_FIELDS.forEach(({ k, unit }) => {
-          const inp = $("ci_" + k);
-          const displayVal = $("val_" + k);
-          if (inp && mission?.series?.[k]) {
-            const dayVal = mission.series[k][val - 1] ?? inp.value;
-            inp.value = dayVal;
-            if (displayVal) displayVal.textContent = `${dayVal} ${unit}`;
-          }
-        });
-      }
-    });
-  }
+  $("preset-nominal")?.addEventListener("click", () => {
+    applyCheckinPreset({
+      mood: 8, stress: 2, fat: 2, slp: 8.0, hydration: 10, nutrition: 8, headache: 0,
+      hr: 62, hrv: 65, spo2: 98.2, sbp: 118, dbp: 76, temp: 36.6,
+      ex: 60, grip: 45, co2: 2.1, dose: 0.35,
+    }, ["None"], "Nominal Baseline");
+  });
 
+  $("preset-fatigued")?.addEventListener("click", () => {
+    applyCheckinPreset({
+      mood: 6, stress: 5, fat: 8, slp: 5.5, hydration: 6, nutrition: 6, headache: 3,
+      hr: 76, hrv: 35, spo2: 97.0, sbp: 126, dbp: 82, temp: 36.9,
+      ex: 90, grip: 38, co2: 2.4, dose: 0.42,
+    }, ["Fatigue", "BackPain"], "Post-EVA Fatigue");
+  });
+
+  $("preset-stress")?.addEventListener("click", () => {
+    applyCheckinPreset({
+      mood: 4, stress: 8, fat: 7, slp: 4.5, hydration: 5, nutrition: 5, headache: 6,
+      hr: 86, hrv: 28, spo2: 97.5, sbp: 136, dbp: 88, temp: 36.8,
+      ex: 25, grip: 40, co2: 2.5, dose: 0.36,
+    }, ["Headache", "Fatigue"], "High Workload & Stress");
+  });
+
+  $("preset-fever")?.addEventListener("click", () => {
+    applyCheckinPreset({
+      mood: 3, stress: 6, fat: 9, slp: 5.0, hydration: 5, nutrition: 4, headache: 7,
+      hr: 96, hrv: 22, spo2: 95.5, sbp: 128, dbp: 84, temp: 38.4,
+      ex: 0, grip: 32, co2: 2.2, dose: 0.35,
+    }, ["Fatigue", "Headache", "Nausea"], "Fever & Infection Contingency");
+  });
+
+  $("preset-co2")?.addEventListener("click", () => {
+    applyCheckinPreset({
+      mood: 4, stress: 6, fat: 6, slp: 5.5, hydration: 8, nutrition: 7, headache: 8,
+      hr: 82, hrv: 40, spo2: 96.0, sbp: 132, dbp: 86, temp: 36.7,
+      ex: 45, grip: 42, co2: 5.2, dose: 0.38,
+    }, ["Headache", "EyeIrritation"], "Elevated Cabin CO2 Scenario");
+  });
+
+  // 7. Form Submit & Real-Time CDSS Analysis Execution
   $("checkin-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const targetInp = $("checkin-target-day");
     const recordedDay = (targetInp && Number(targetInp.value)) ? Number(targetInp.value) : T;
+
     const payload = {
       astronaut_id: currentAstronaut.id,
       day: recordedDay,
@@ -1190,74 +1369,267 @@ function setupCheckinForm() {
       notes: $("checkin-notes") ? $("checkin-notes").value : "",
     };
 
+    // Extract all 17 fields
     CHECKIN_FIELDS.forEach(({ k }) => {
       const inp = $("ci_" + k);
       if (inp) {
-        const num = Number(inp.value);
-        payload[k] = num;
-        if (mission.series[k]) mission.series[k][recordedDay - 1] = num;
+        payload[k] = Number(inp.value);
       }
     });
 
+    // Determine if adding a new day or modifying an existing date
+    const curLen = mission?.series?.hr ? mission.series.hr.length : N;
+    const isNewDay = recordedDay > curLen;
+
+    if (isNewDay) {
+      // Extend series arrays up to recordedDay
+      for (let d = curLen + 1; d <= recordedDay; d++) {
+        for (const k of ALL_METRICS_KEYS) {
+          if (!mission.series[k]) mission.series[k] = [];
+          const valToPut = (d === recordedDay)
+            ? (payload[k] ?? mission.series[k][d - 2] ?? ctx.base[k]?.mean ?? 0)
+            : (mission.series[k][d - 2] ?? ctx.base[k]?.mean ?? 0);
+          mission.series[k].push(valToPut);
+        }
+      }
+      mission.days = mission.series.hr.length;
+    } else {
+      // Update existing day in-place
+      for (const k of ALL_METRICS_KEYS) {
+        if (mission.series[k] && payload[k] != null) {
+          mission.series[k][recordedDay - 1] = payload[k];
+        }
+      }
+    }
+
+    // Save Check-in and Telemetry to IndexedDB
     await saveCheckIn(payload);
 
-    // Save updated telemetry
     const currentVitals = {};
-    for (const k in mission.series) currentVitals[k] = mission.series[k][recordedDay - 1];
+    for (const k of ALL_METRICS_KEYS) currentVitals[k] = payload[k];
     await saveTelemetry({
       astronaut_id: currentAstronaut.id,
       day: recordedDay,
       vitals: currentVitals,
-      simulated: true,
+      simulated: false,
     });
 
-    // ── ADVANCE TO NEXT DAY (Add one more day to timeline) ──
-    const nextDay = recordedDay + 1;
-    T = nextDay;
+    // Background sync with FastAPI Backend
+    fetch("http://127.0.0.1:8000/api/v1/telemetry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        astronaut_id: currentAstronaut.id,
+        mission_day: recordedDay,
+        source: "checkin_entry",
+        ...currentVitals,
+      }),
+    }).catch(() => {
+      // Offline-first architecture queues sync automatically via IndexedDB
+    });
 
-    // Extend series if new day exceeds current length
-    const curLen = mission.series.hr ? mission.series.hr.length : N;
-    if (T > curLen) {
-      for (const k in mission.series) {
-        const lastVal = mission.series[k][curLen - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : 0);
-        mission.series[k].push(lastVal);
-      }
-      mission.days = mission.series.hr.length;
-    }
+    // Update Application Global Timeline Day
+    T = recordedDay;
+    const totalDays = Math.max(180, mission.series.hr.length);
 
-    const totalDays = Math.max(180, mission.series.hr ? mission.series.hr.length : 180);
     const slider = $("tl-slider");
     if (slider) {
       slider.max = totalDays;
       slider.value = T;
     }
 
-    // Refresh checkin inputs for the new day
-    CHECKIN_FIELDS.forEach(({ k, unit }) => {
-      const inp = $("ci_" + k);
-      const val = $("val_" + k);
-      if (inp) {
-        const nextVal = mission.series[k] ? (mission.series[k][T - 1] ?? inp.value) : inp.value;
-        inp.value = nextVal;
-        if (val) val.textContent = `${nextVal} ${unit}`;
-      }
-    });
-
-    // Reset symptoms to Asymptomatic for the new next day
-    document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
-      cb.checked = cb.value === "None";
-    });
-    if ($("checkin-notes")) $("checkin-notes").value = "";
-
-    playXP();
-    const fb = $("checkin-feedback");
-    if (fb) {
-      fb.innerHTML = `<strong>Day ${recordedDay} saved!</strong> Added and advanced to <strong>Mission Day ${T}</strong>.`;
-      setTimeout(() => (fb.innerHTML = ""), 6000);
+    const headerDayInput = $("header-day-input");
+    if (headerDayInput) {
+      headerDayInput.max = totalDays;
+      headerDayInput.value = T;
     }
 
+    // Recompute Whole-Mission Baselines, EWMA Drifts & Re-render Dashboard
     recompute();
+
+    // Run CDSS Analysis for this day & render directives console
+    const a = analyze(ctx, recordedDay);
+    renderCheckinResults(recordedDay, payload, a);
+
+    // Audio Cue
+    if (a.overall.tier >= 2) {
+      playWarn();
+    } else {
+      playXP();
+    }
+
+    // Feedback message
+    const fb = $("checkin-feedback");
+    if (fb) {
+      const modeText = isNewDay ? `New Mission Day ${recordedDay} registered!` : `Mission Day ${recordedDay} updated!`;
+      fb.innerHTML = `<strong>${modeText}</strong> CDSS re-analysis complete (Tier ${a.overall.tier} status).`;
+      setTimeout(() => (fb.innerHTML = ""), 6000);
+    }
   });
+
+  // 8. Render Check-in CDSS Results & Astronaut Action Directives Console
+  function renderCheckinResults(day, payload, a) {
+    const panel = $("checkin-results-panel");
+    if (!panel || !a) return;
+
+    panel.style.display = "block";
+
+    // Headline & metadata
+    const headlineEl = $("res-panel-headline");
+    const subEl = $("res-panel-sub");
+    const astroIdEl = $("res-astro-id");
+    const dayLabelEl = $("res-day-label");
+    if (astroIdEl) astroIdEl.textContent = `${currentAstronaut.name} (${currentAstronaut.id})`;
+    if (dayLabelEl) dayLabelEl.textContent = `Mission Day ${day}`;
+
+    const tier = a.overall.tier;
+    const ws = a.overall.status;
+    const isCrit = tier >= 2 || ws === 2;
+
+    // Tier badge
+    const tierBadge = $("res-tier-badge");
+    const tierText = $("res-tier-text");
+    if (tierBadge && tierText) {
+      tierBadge.className = `results-tier-badge ${tier === 0 ? "tier-0" : tier === 1 ? "tier-1" : "tier-2"}`;
+      const tierLabels = [
+        "TIER 0 - NOMINAL FLIGHT STATUS",
+        "TIER 1 - PHYSIOLOGICAL DRIFT WATCH",
+        "TIER 2 - AUTONOMOUS COUNTERMEASURE CAUTION",
+        "TIER 3 - CLINICAL WARNING CONTINGENCY",
+        "TIER 4 - CRITICAL CONTINGENCY",
+      ];
+      tierText.textContent = tierLabels[tier] || `TIER ${tier}`;
+    }
+
+    // Domain Risk Cards Grid
+    const domainsGrid = $("res-domains-grid");
+    if (domainsGrid) {
+      const domainMeta = [
+        { key: "car", name: "Cardiovascular", icon: "❤️" },
+        { key: "imm", name: "Immune System", icon: "🛡️" },
+        { key: "neu", name: "Neurovestibular", icon: "🧠" },
+        { key: "msk", name: "Musculoskeletal", icon: "🦴" },
+        { key: "env", name: "ECLSS / Cabin", icon: "🛰️" },
+        { key: "rad", name: "Radiation Exposure", icon: "☢️" },
+      ];
+      domainsGrid.innerHTML = domainMeta.map(({ key, name, icon }) => {
+        const dom = a.domains[key];
+        const st = dom ? dom.status : 0;
+        const statusClass = st === 2 ? "act" : st === 1 ? "watch" : "nominal";
+        const statusLabel = st === LEARNING ? "LEARNING" : st === 2 ? "ACT" : st === 1 ? "WATCH" : "NORMAL";
+        const topInd = dom && dom.indicators && dom.indicators[0];
+        const detail = topInd ? `${topInd.name}: ${topInd.drift >= 0 ? "+" : ""}${topInd.drift.toFixed(1)}σ` : "All nominal";
+
+        return `
+          <div class="domain-result-card status-${statusClass}">
+            <div class="domain-res-header">
+              <span class="domain-res-name">${icon} ${name}</span>
+              <span class="domain-res-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <span class="domain-res-sub">${detail}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Flagged Deviations
+    const devList = $("res-deviations-list");
+    const devCount = $("res-deviations-count");
+    const deviations = [];
+
+    for (const k of ALL_METRICS_KEYS) {
+      const val = payload[k];
+      const base = ctx.base[k];
+      const cfg = C.metrics[k];
+      if (val != null && base && cfg) {
+        const z = (val - base.mean) / base.sd;
+        const drift = ctx.drift[k] ? (ctx.drift[k][day - 1] ?? 0) : 0;
+        if (Math.abs(drift) >= 1.0 || Math.abs(z) >= 1.4) {
+          const isSevere = Math.abs(drift) >= 2.0 || Math.abs(z) >= 2.2;
+          const diff = (val - base.mean).toFixed(cfg.dec || 1);
+          const sign = val >= base.mean ? "+" : "";
+          deviations.push({
+            metric: cfg.name,
+            recorded: `${val} ${cfg.unit}`,
+            baseline: `${base.mean.toFixed(cfg.dec || 1)} ${cfg.unit}`,
+            diff: `${sign}${diff} ${cfg.unit}`,
+            drift: drift.toFixed(1),
+            severe: isSevere,
+          });
+        }
+      }
+    }
+
+    if (devCount) devCount.textContent = `${deviations.length} Metric Deviations Detected`;
+    if (devList) {
+      if (deviations.length === 0) {
+        devList.innerHTML = `<span class="deviation-pill nominal">● All 17 Biometrics Within Individualized ±1.3σ Normal Band</span>`;
+      } else {
+        devList.innerHTML = deviations.map((d) => `
+          <span class="deviation-pill ${d.severe ? "crit" : ""}" title="Baseline: ${d.baseline} | Drift: ${d.drift}σ">
+            <strong>${d.metric}:</strong> ${d.recorded} (${d.diff}, ${d.drift}σ)
+          </span>
+        `).join("");
+      }
+    }
+
+    // Action Commands to Astronaut
+    const commandsList = $("res-commands-list");
+    const commands = [];
+
+    if (a.domains.imm?.status >= 2 || a.domains.imm?.rule === "infection" || payload.temp >= 37.8) {
+      commands.push(`<li><span class="cmd-badge crit">IMMUNE INTERVENTION</span> <strong>Infection / Hyperthermia Protocol:</strong> Isolate in private crew quarters. Ingest 1000 mL oral rehydration solution. Run cartridge blood analysis on MinION sequencer.</li>`);
+    }
+    if (a.domains.env?.status >= 1 || payload.co2 >= 3.5) {
+      commands.push(`<li><span class="cmd-badge ${payload.co2 >= 4.5 ? "crit" : "warn"}">ECLSS DIRECTIVE</span> <strong>Elevated Cabin CO2:</strong> Verify Carbon Dioxide Removal Assembly (CDRA) desiccant bed cycle. Ensure crew module ventilation airflow exceeds 0.05 m/s.</li>`);
+    }
+    if (payload.slp <= 5.5 || payload.fat >= 7) {
+      commands.push(`<li><span class="cmd-badge warn">CIRCADIAN PROTOCOL</span> <strong>Circadian Sleep Rest:</strong> Stand down from upcoming EVA/robotic maneuvers for 24h. Dim cabin lighting to amber (450nm-depleted) 2 hours before scheduled rest.</li>`);
+    }
+    if (payload.mood <= 4 || payload.stress >= 7) {
+      commands.push(`<li><span class="cmd-badge warn">NEURO-COGNITIVE</span> <strong>Cognitive Decompression:</strong> Activate 15-minute guided binaural relaxation in the VR headset workstation. Notify onboard medical officer log.</li>`);
+    }
+    if (payload.sbp >= 135 || payload.dbp >= 90 || (payload.symptoms && payload.symptoms.includes("EyeIrritation"))) {
+      commands.push(`<li><span class="cmd-badge warn">SANS PROTOCOL</span> <strong>Cephalad Fluid Shift / SANS:</strong> Initiate 30-minute Lower Body Negative Pressure (LBNP) chamber protocol at -25 mmHg. Perform optical fundus photography inspection.</li>`);
+    }
+    if (payload.hydration < 8) {
+      commands.push(`<li><span class="cmd-badge warn">FLUID BALANCE</span> <strong>Fluid Deficit Countermeasure:</strong> Ingest 2 additional 250mL electrolyte beverage packs to compensate for microgravity renal excretion.</li>`);
+    }
+    if (payload.ex < 30 || payload.grip <= 35) {
+      commands.push(`<li><span class="cmd-badge warn">BONE &amp; MUSCLE</span> <strong>Musculoskeletal Loading:</strong> Schedule mandatory supplemental 60-minute ARED cycle (squat &amp; deadlift loading) to prevent bone demineralization.</li>`);
+    }
+    if (a.spe) {
+      commands.unshift(`<li><span class="cmd-badge crit">RADIATION EMERGENCY</span> <strong>Solar Particle Event (SPE):</strong> Move immediately to the radiation storm shelter module with water wall shielding.</li>`);
+    }
+
+    if (commands.length === 0) {
+      commands.push(`<li><span class="cmd-badge">STABLE</span> <strong>Nominal Flight Status:</strong> All physiological markers match your individualized flight baseline. Continue standard 120-minute daily resistive exercise regimen.</li>`);
+      commands.push(`<li><span class="cmd-badge">ROUTINE</span> <strong>Hydration &amp; Rest:</strong> Maintain standard 2.5L daily hydration target and observe scheduled circadian wind-down at 21:00 MET.</li>`);
+    }
+
+    if (commandsList) {
+      commandsList.innerHTML = commands.join("");
+    }
+
+    // Connect Jump to Digital Twin Button
+    const jumpBtn = $("btn-jump-digital-twin");
+    if (jumpBtn) {
+      jumpBtn.onclick = () => {
+        document.querySelector('[data-tab="tab-overview"]')?.click();
+        setTimeout(() => {
+          const twin = $("digital-twin-container");
+          if (twin) twin.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      };
+    }
+
+    // Smoothly scroll to results panel
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Expose for external navigation triggers & initial load
+  window.loadCheckinDay = loadCheckinDay;
+  loadCheckinDay(T);
 }
 
 // ── Multi-Astronaut Profile Switcher (Part 16) ──────────────────────────────
@@ -1370,9 +1742,11 @@ function render() {
   }
 
   const checkinDayInput = $("checkin-target-day");
-  if (checkinDayInput && Number(checkinDayInput.value) !== t) {
-    checkinDayInput.value = t;
-    checkinDayInput.max = totalDays;
+  if (checkinDayInput) {
+    checkinDayInput.max = totalDays + 1;
+    if (activeTab !== "tab-checkin" && Number(checkinDayInput.value) !== t) {
+      checkinDayInput.value = t;
+    }
   }
 
   if ($("header-phase")) {
@@ -1488,6 +1862,10 @@ async function init() {
         if (activeTab === "tab-monitoring") renderHealthMonitoringChart(monMetric, monRange);
         if (activeTab === "tab-intelligence") renderHealthIntelligenceView(analyze(ctx, T));
         if (activeTab === "tab-data") renderMissionDataStats();
+        if (activeTab === "tab-checkin" && window.loadCheckinDay) {
+          const curVal = parseInt($("checkin-target-day")?.value || T, 10);
+          window.loadCheckinDay(curVal || T);
+        }
       });
     });
 
@@ -1725,7 +2103,6 @@ async function init() {
 
     async function checkSupabaseStatus() {
       const pill = $("header-supabase-pill");
-      const label = $("supabase-status-label");
       const badge = $("supabase-connection-badge");
       try {
         const res = await fetch(`${FASTAPI_BASE}/supabase/status`, { signal: AbortSignal.timeout(2500) });
@@ -1733,7 +2110,6 @@ async function init() {
           const data = await res.json();
           const isConn = data.online === true || data.status === "CONNECTED";
           if (pill) pill.className = isConn ? "header-pill status-ok" : "header-pill status-delay";
-          if (label) label.textContent = isConn ? "Supabase Cloud" : "Supabase Offline";
           if (badge) {
             badge.textContent = isConn ? "CONNECTED" : "OFFLINE BUFFERING";
             badge.style.background = isConn ? "rgba(52,211,153,0.15)" : "rgba(245,158,11,0.15)";
@@ -1744,7 +2120,6 @@ async function init() {
         }
       } catch (e) {
         if (pill) pill.className = "header-pill status-delay";
-        if (label) label.textContent = "Supabase Buffering";
         if (badge) {
           badge.textContent = "OFFLINE BUFFERING";
           badge.style.background = "rgba(245,158,11,0.15)";

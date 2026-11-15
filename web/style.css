@@ -1501,6 +1501,35 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+.checkin-day-stepper-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.checkin-step-day-btn {
+  width: 28px;
+  height: 28px;
+  background: rgba(14, 28, 42, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--cyan);
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.checkin-step-day-btn:hover:not(:disabled) {
+  border-color: var(--cyan);
+  background: rgba(0, 246, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.4);
+}
+.checkin-step-day-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 .checkin-target-day-wrap {
   display: inline-flex;
@@ -1537,6 +1566,87 @@ h1, h2, h3, h4 {
 }
 .checkin-day-number-input[type=number] {
   -moz-appearance: textfield;
+}
+
+/* ── Check-in Mode Banner ── */
+.checkin-mode-banner {
+  background: rgba(6, 14, 24, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  margin: 16px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.checkin-mode-banner.mode-new {
+  border-color: rgba(0, 246, 255, 0.5);
+  border-left-color: #36e6d0;
+  background: rgba(8, 24, 32, 0.6);
+  box-shadow: 0 0 16px rgba(0, 246, 255, 0.15);
+}
+.mode-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mode-banner-left strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.mode-banner-left span {
+  font-size: 0.8rem;
+  color: var(--text-sec);
+}
+.record-state-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0, 246, 255, 0.12);
+  border: 1px solid rgba(0, 246, 255, 0.4);
+  color: var(--cyan);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* ── Category Filter Pills ── */
+.checkin-category-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.cat-pill {
+  background: rgba(8, 18, 28, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.cat-pill:hover {
+  color: var(--text-main);
+  border-color: rgba(0, 246, 255, 0.4);
+}
+.cat-pill.active {
+  background: rgba(0, 246, 255, 0.15);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.25);
 }
 .badge-time {
   font-family: var(--font-mono);
@@ -1766,6 +1876,236 @@ h1, h2, h3, h4 {
   font-weight: 700;
 }
 .save-feedback { font-weight: 600; color: var(--status-ok); font-size: 0.88rem; }
+
+/* ── Post-Checkin Clinical Intelligence & Directives Console ── */
+.checkin-results-panel {
+  margin-top: 28px;
+  background: rgba(6, 14, 24, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 246, 255, 0.4);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 246, 255, 0.12);
+  animation: bannerSlide 0.4s ease-out;
+}
+.results-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.results-panel-title-wrap h4 {
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  margin: 4px 0 2px;
+  color: #fff;
+}
+.results-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.results-tier-badge.tier-0 {
+  background: rgba(0, 246, 255, 0.15);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0, 246, 255, 0.3);
+}
+.results-tier-badge.tier-1 {
+  background: rgba(245, 185, 66, 0.15);
+  border: 1px solid var(--status-warn);
+  color: var(--status-warn);
+  box-shadow: 0 0 12px rgba(245, 185, 66, 0.3);
+}
+.results-tier-badge.tier-2, .results-tier-badge.tier-3, .results-tier-badge.tier-4 {
+  background: rgba(255, 75, 85, 0.18);
+  border: 1px solid var(--status-crit);
+  color: var(--status-crit);
+  box-shadow: 0 0 14px rgba(255, 75, 85, 0.35);
+}
+
+/* Domain Risk Cards */
+.results-domains-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .results-domains-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .results-domains-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.domain-result-card {
+  background: rgba(8, 18, 28, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all var(--transition);
+}
+.domain-result-card.status-act {
+  border-color: var(--status-crit);
+  background: rgba(30, 10, 14, 0.55);
+  box-shadow: 0 0 10px rgba(255, 75, 85, 0.2);
+}
+.domain-result-card.status-watch {
+  border-color: var(--status-warn);
+  background: rgba(30, 24, 10, 0.55);
+  box-shadow: 0 0 10px rgba(245, 185, 66, 0.2);
+}
+.domain-res-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.domain-res-name {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.domain-res-status {
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.domain-res-status.nominal { color: var(--cyan); }
+.domain-res-status.watch { color: var(--status-warn); }
+.domain-res-status.act { color: var(--status-crit); }
+.domain-res-sub {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  line-height: 1.2;
+}
+
+/* Deviations Box */
+.results-deviations-box {
+  background: rgba(10, 20, 32, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.deviations-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.deviations-box-title {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+.deviations-box-sub {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.deviations-pills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.deviation-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(245, 185, 66, 0.1);
+  border: 1px solid rgba(245, 185, 66, 0.4);
+  color: var(--status-warn);
+}
+.deviation-pill.crit {
+  background: rgba(255, 75, 85, 0.12);
+  border-color: rgba(255, 75, 85, 0.45);
+  color: var(--status-crit);
+}
+.deviation-pill.nominal {
+  background: rgba(0, 246, 255, 0.08);
+  border-color: rgba(0, 246, 255, 0.3);
+  color: var(--cyan);
+}
+
+/* Action Directives Console */
+.results-directives-box {
+  background: rgba(8, 20, 30, 0.8);
+  border: 1px solid rgba(0, 246, 255, 0.35);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+}
+.directives-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.directives-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.directives-box-title {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.directives-box-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.checkin-commands-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.checkin-commands-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text-main);
+  background: rgba(4, 12, 20, 0.6);
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.field-desc {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
 
 /* ============================================================
    TABS 5 TO 8: RADIATION, MENTAL, BONE/MUSCLE, ENV

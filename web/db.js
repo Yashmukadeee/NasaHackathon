@@ -170,13 +170,16 @@ export function saveCheckIn(record) {
   if (!record.astronaut_id || !record.day) throw new Error("Invalid check-in record parameters");
   const id = `${record.astronaut_id}_${record.day}`;
   const payload = {
+    ...record,
     id,
     astronaut_id: record.astronaut_id,
-    day: record.day,
+    day: Number(record.day),
     mood: Number(record.mood) || 0,
     stress: Number(record.stress) || 0,
-    fatigue: Number(record.fatigue) || 0,
-    sleep: Number(record.sleep) || 0,
+    fatigue: Number(record.fatigue != null ? record.fatigue : record.fat) || 0,
+    sleep: Number(record.sleep != null ? record.sleep : record.slp) || 0,
+    fat: Number(record.fat != null ? record.fat : record.fatigue) || 0,
+    slp: Number(record.slp != null ? record.slp : record.sleep) || 0,
     symptoms: Array.isArray(record.symptoms) ? record.symptoms : [],
     notes: typeof record.notes === "string" ? record.notes.trim() : "",
     timestamp: new Date().toISOString(),
@@ -192,6 +195,14 @@ export function saveCheckIn(record) {
     }).catch((e) => console.warn("[ASTRA DB] Could not queue check-in for sync:", e));
     return res;
   });
+}
+
+/**
+ * Retrieve a specific day check-in for an astronaut.
+ */
+export function getCheckIn(astronautId, day) {
+  const id = `${astronautId}_${day}`;
+  return withStore("checkins", "readonly", (store) => store.get(id));
 }
 
 /**

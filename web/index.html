@@ -103,14 +103,12 @@
             <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
           </div>
 
-        <div class="header-pill status-ok" id="header-supabase-pill" title="Supabase Cloud Database & Realtime">
+        <div class="header-pill status-ok" id="header-supabase-pill" title="Cloud Database Link">
           <span class="pill-dot"></span>
-          <span id="supabase-status-label">Supabase Cloud</span>
         </div>
 
-        <div class="header-pill status-ok" id="header-wearable-pill" title="Astronaut Wearable Hardware Gateway">
+        <div class="header-pill status-ok" id="header-wearable-pill" title="Wearable Hardware Link">
           <span class="pill-dot"></span>
-          <span id="wearable-status-label">BLE Gateway</span>
         </div>
 
         <!-- Essential Utilities -->
@@ -497,33 +495,63 @@
       </div>
 
       <!-- ============================================================
-         TAB 3: DAILY CHECK-IN
+         TAB 3: DAILY CHECK-IN & CLINICAL TELEMETRY LOG
          ============================================================ -->
       <div id="tab-checkin" class="view-panel">
         <section class="card-panel checkin-card-container">
           <div class="panel-header">
             <div>
-              <span class="panel-tag">SUBJECTIVE BIOMETRICS</span>
-              <h3>DAILY ASTRONAUT WELLNESS CHECK-IN</h3>
+              <span class="panel-tag">SUBJECTIVE &amp; CLINICAL TELEMETRY</span>
+              <h3>DAILY ASTRONAUT WELLNESS &amp; CLINICAL LOG</h3>
             </div>
             <div class="checkin-header-meta">
-              <div class="checkin-target-day-wrap" title="Manually select which Mission Day to log or inspect">
-                <span class="mu">Target Day:</span>
-                <input type="number" id="checkin-target-day" min="1" max="180" value="30" class="checkin-day-number-input">
+              <div class="checkin-day-stepper-wrap">
+                <button type="button" class="checkin-step-day-btn" id="checkin-prev-day" title="Previous Mission Day">◀</button>
+                <div class="checkin-target-day-wrap" title="Manually select which Mission Day to log or inspect">
+                  <span class="mu">Day</span>
+                  <input type="number" id="checkin-target-day" min="1" max="180" value="30" class="checkin-day-number-input">
+                  <span class="mu" id="checkin-total-days-label">/ 180</span>
+                </div>
+                <button type="button" class="checkin-step-day-btn" id="checkin-next-day" title="Next Mission Day">▶</button>
               </div>
-              <span class="badge-time">30s ASSESSMENT</span>
-              <span class="header-pill status-ok">Auto-Saves to Device</span>
+              <button type="button" class="header-action-btn primary" id="btn-add-new-day" title="Create a new mission day entry">➕ New Mission Day</button>
+              <span class="badge-time">REAL-TIME INGESTION</span>
+              <span class="header-pill status-ok">Auto-Persists to IndexedDB</span>
             </div>
           </div>
 
-          <p class="mu">Rapid daily self-assessment for cognitive fatigue, circadian sleep, cardiovascular pressure, and symptoms. Telemetry automatically synchronizes to onboard flight records.</p>
+          <p class="mu">Autonomous daily clinical assessment spanning subjective cognition, cardiovascular vitals, musculoskeletal performance, and habitat environmental readings. Updates trigger real-time CDSS drift re-analysis and generate actionable countermeasure directives.</p>
+
+          <!-- Dynamic Mode Indicator Banner -->
+          <div id="checkin-mode-banner" class="checkin-mode-banner mode-edit">
+            <div class="mode-banner-left">
+              <span class="pulse-dot" id="checkin-mode-pulse"></span>
+              <div>
+                <strong id="checkin-mode-title">LOGGING MISSION DAY 30</strong>
+                <span id="checkin-mode-desc">Reviewing recorded flight biometrics. Modify any parameter to update flight records and recompute clinical intelligence.</span>
+              </div>
+            </div>
+            <div class="mode-banner-right" id="checkin-mode-action-wrap">
+              <span class="record-state-badge" id="checkin-record-status">HISTORICAL RECORD</span>
+            </div>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="checkin-category-bar">
+            <button type="button" class="cat-pill active" data-cat="all">All 17 Parameters</button>
+            <button type="button" class="cat-pill" data-cat="subjective">Subjective &amp; Cognitive (7)</button>
+            <button type="button" class="cat-pill" data-cat="vitals">Cardiovascular &amp; Vitals (6)</button>
+            <button type="button" class="cat-pill" data-cat="environment">Performance &amp; Habitat (4)</button>
+          </div>
 
           <!-- Quick 1-Click Preset Bar -->
           <div class="checkin-presets-bar">
-            <span class="presets-label">QUICK PRESETS:</span>
+            <span class="presets-label">QUICK BIOMETRIC PRESETS:</span>
             <button type="button" class="preset-btn" id="preset-nominal">Nominal Baseline</button>
             <button type="button" class="preset-btn" id="preset-fatigued">Post-EVA Fatigue</button>
             <button type="button" class="preset-btn" id="preset-stress">High Workload</button>
+            <button type="button" class="preset-btn" id="preset-fever">Fever &amp; Infection</button>
+            <button type="button" class="preset-btn" id="preset-co2">Elevated CO2</button>
           </div>
 
           <form id="checkin-form" class="checkin-form">
@@ -540,19 +568,63 @@
               <label class="chip-check"><input type="checkbox" value="Fatigue"> Cognitive Fatigue</label>
               <label class="chip-check"><input type="checkbox" value="BackPain"> Spine Elongation</label>
               <label class="chip-check"><input type="checkbox" value="EyeIrritation"> Eye Strain / SANS</label>
+              <label class="chip-check"><input type="checkbox" value="Tachycardia"> Heart Palpitations</label>
+              <label class="chip-check"><input type="checkbox" value="Dizziness"> Orthostatic Dizziness</label>
             </div>
 
             <div class="checkin-section-divider">
               <span class="divider-title">OPERATIONAL CREW NOTES (OPTIONAL)</span>
             </div>
             <textarea id="checkin-notes" class="form-textarea" rows="2"
-              placeholder="Note physical sensations, sleep disruptions, or habitat environment observations..."></textarea>
+              placeholder="Note physical sensations, sleep disruptions, exercise performance, or habitat environment observations..."></textarea>
 
             <div class="checkin-actions">
-              <button type="submit" class="header-action-btn primary btn-lg">Submit &amp; Sync Check-in</button>
+              <button type="submit" class="header-action-btn primary btn-lg" id="btn-submit-checkin">🚀 Submit, Save &amp; Analyze Day</button>
+              <button type="button" class="header-action-btn" id="btn-reset-checkin">↺ Reset to Baseline</button>
               <span class="save-feedback" id="checkin-feedback"></span>
             </div>
           </form>
+
+          <!-- Post-Checkin Clinical Intelligence & Astronaut Action Directives Console -->
+          <div id="checkin-results-panel" class="checkin-results-panel" style="display:none">
+            <div class="results-panel-header">
+              <div class="results-panel-title-wrap">
+                <span class="panel-tag cyan">AUTONOMOUS CDSS ANALYSIS</span>
+                <h4 id="res-panel-headline">DIAGNOSTIC ANALYSIS &amp; ACTION DIRECTIVES</h4>
+                <p class="mu" id="res-panel-sub">Evaluated for Astronaut <strong id="res-astro-id">ASTRO-1</strong> on <strong id="res-day-label">Mission Day 30</strong></p>
+              </div>
+              <div class="results-tier-badge-wrap">
+                <div id="res-tier-badge" class="results-tier-badge tier-0">
+                  <span class="pulse-dot" id="res-tier-dot"></span>
+                  <span id="res-tier-text">TIER 0 - NOMINAL</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Domain Risk Cards Matrix -->
+            <div class="results-domains-grid" id="res-domains-grid"></div>
+
+            <!-- Flagged Biometric Deviations & Clinical Insights -->
+            <div class="results-deviations-box" id="res-deviations-box">
+              <div class="deviations-box-header">
+                <span class="deviations-box-title">FLAGGED PHYSIOLOGICAL DEVIATIONS FROM BASELINE</span>
+                <span class="deviations-box-sub" id="res-deviations-count">0 Anomalies Detected</span>
+              </div>
+              <div class="deviations-pills-list" id="res-deviations-list"></div>
+            </div>
+
+            <!-- Actionable Directives & Commands to the Astronaut -->
+            <div class="results-directives-box" id="res-directives-box">
+              <div class="directives-box-header">
+                <div class="directives-header-left">
+                  <span class="directives-box-title">PRIORITIZED ASTRONAUT ACTION COMMANDS</span>
+                  <span class="directives-box-sub" id="res-directives-sub">Autonomous onboard countermeasure protocols</span>
+                </div>
+                <button type="button" class="header-action-btn primary" id="btn-jump-digital-twin">🩺 View in Anatomical Twin</button>
+              </div>
+              <ul class="checkin-commands-list" id="res-commands-list"></ul>
+            </div>
+          </div>
         </section>
       </div>
 
