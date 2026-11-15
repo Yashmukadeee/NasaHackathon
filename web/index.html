@@ -92,13 +92,10 @@
 
           <!-- Timeline Quick Scrubber & Manual Day Input in Header -->
           <div class="header-timeline-ctrl" title="Manual Mission Day Selector & Trajectory Scrubber">
-            <button id="tl-prev-day-btn" class="day-step-btn" title="Previous Mission Day" aria-label="Previous Day">-</button>
             <div class="header-day-input-wrap">
               <span class="day-prefix">DAY</span>
-              <input type="number" id="header-day-input" min="1" max="180" value="30" class="header-day-input" title="Type any Mission Day (1-180) to jump directly">
-              <span class="day-suffix">/ <span id="header-day-max">180</span></span>
+              <input type="number" id="header-day-input" min="1" max="180" value="30" class="header-day-input" title="Type any Mission Day to jump directly">
             </div>
-            <button id="tl-next-day-btn" class="day-step-btn" title="Next Mission Day" aria-label="Next Day">+</button>
             <input type="range" min="1" max="180" value="30" id="tl-slider" class="timeline-slider header-slider" aria-label="180-Day Mission Trajectory Scrubber">
             <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">PLAY</button>
           </div>
