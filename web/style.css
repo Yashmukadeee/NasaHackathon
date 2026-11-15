@@ -151,12 +151,12 @@ h1, h2, h3, h4 {
    TOP AEROSPACE NAVIGATION (Clean, Elevated, Properly Aligned)
    ============================================================ */
 .app-header {
-  height: 64px;
-  min-height: 64px;
+  height: 76px;
+  min-height: 76px;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(6, 14, 22, 0.3);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(6, 14, 22, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@ h1, h2, h3, h4 {
 }
 
 .header-inner {
-  max-width: 1560px;
+  max-width: 1640px;
   margin: 0 auto;
   width: 100%;
   padding: 0 32px;
@@ -178,7 +178,7 @@ h1, h2, h3, h4 {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
 }
 
 /* ── Fullscreen Mission Preloader Overlay (Smooth Cinematic Slow Zoom-In) ── */
@@ -232,8 +232,8 @@ h1, h2, h3, h4 {
   cursor: pointer;
 }
 .brand-logo-img {
-  width: 44px;
-  height: 44px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid rgba(0, 246, 255, 0.45);
@@ -247,30 +247,30 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 20px rgba(0, 246, 255, 0.65);
 }
 
-/* ── Clean Segmented Aerospace Tab Navigation ── */
+/* ── Clean Segmented Aerospace Tab Navigation (Enlarged) ── */
 .top-nav {
   display: inline-flex;
   align-items: center;
-  background: rgba(8, 18, 28, 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(8, 18, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 3px;
+  padding: 4px;
+  gap: 5px;
 }
 
 .top-nav .nav-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 34px;
-  padding: 0 16px;
+  height: 42px;
+  padding: 0 20px;
   background: transparent;
   color: var(--text-muted);
   border: 1px solid transparent;
-  border-radius: 7px;
-  font-size: 0.86rem;
+  border-radius: 8px;
+  font-size: 0.94rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -289,7 +289,7 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
-/* ── Uniformly Aligned Header Right Controls (36px Fixed Height) ── */
+/* ── Uniformly Aligned Header Right Controls (42px Fixed Height) ── */
 .header-right {
   display: flex;
   align-items: center;
@@ -299,14 +299,14 @@ h1, h2, h3, h4 {
 .header-meta-text {
   display: inline-flex;
   align-items: center;
-  height: 36px;
-  font-size: 0.84rem;
+  height: 42px;
+  font-size: 0.88rem;
   font-weight: 500;
   color: var(--text-muted);
   white-space: nowrap;
-  background: rgba(8, 18, 28, 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(8, 18, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-subtle);
   padding: 0 14px;
   border-radius: var(--radius-sm);
@@ -320,12 +320,12 @@ h1, h2, h3, h4 {
 .header-timeline-ctrl {
   display: inline-flex;
   align-items: center;
-  height: 36px;
+  height: 42px;
   gap: 8px;
-  background: rgba(8, 18, 28, 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 0 10px;
+  background: rgba(8, 18, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 0 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
 }
@@ -333,26 +333,26 @@ h1, h2, h3, h4 {
 .header-day-input-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 .day-prefix {
   font-weight: 700;
   color: var(--cyan);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
 }
 .header-day-input {
-  width: 52px;
-  height: 24px;
+  width: 54px;
+  height: 26px;
   background: rgba(4, 10, 18, 0.85);
   border: 1px solid rgba(0, 246, 255, 0.45);
   border-radius: 4px;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
   text-align: center;
   padding: 0 4px;
@@ -374,16 +374,16 @@ h1, h2, h3, h4 {
 }
 
 .header-timeline-ctrl #tl-play-btn {
-  height: 24px;
-  padding: 0 10px;
-  font-size: 0.74rem;
+  height: 26px;
+  padding: 0 12px;
+  font-size: 0.76rem;
   letter-spacing: 0.05em;
   font-weight: 700;
   border-radius: 4px;
 }
 
 .header-slider {
-  width: 110px;
+  width: 115px;
   height: 4px;
   accent-color: var(--cyan);
   cursor: pointer;
@@ -391,16 +391,47 @@ h1, h2, h3, h4 {
   border-radius: 2px;
 }
 
+.header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 12px;
+  background: rgba(8, 18, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.header-pill .pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.header-pill.status-ok .pill-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+.header-pill.status-delay .pill-dot {
+  background: var(--status-warn);
+  box-shadow: 0 0 8px var(--status-warn);
+}
+
 .header-action-btn {
-  height: 36px;
-  background: rgba(8, 18, 28, 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  height: 42px;
+  background: rgba(8, 18, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text-main);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 0 14px;
-  font-size: 0.82rem;
+  padding: 0 15px;
+  font-size: 0.84rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
@@ -416,13 +447,13 @@ h1, h2, h3, h4 {
   color: #fff;
 }
 .header-action-btn.primary {
-  background: rgba(54, 230, 208, 0.15);
-  border-color: rgba(54, 230, 208, 0.45);
+  background: rgba(0, 246, 255, 0.15);
+  border-color: rgba(0, 246, 255, 0.45);
   color: var(--cyan);
 }
 .header-action-btn.primary:hover {
-  background: rgba(54, 230, 208, 0.28);
-  box-shadow: 0 0 12px rgba(54, 230, 208, 0.3);
+  background: rgba(0, 246, 255, 0.28);
+  box-shadow: 0 0 12px rgba(0, 246, 255, 0.3);
 }
 .header-action-btn.danger {
   background: rgba(255, 75, 85, 0.15);
@@ -1011,33 +1042,6 @@ h1, h2, h3, h4 {
   display: block;
 }
 
-/* ── Workstation Top Focus Alert Banner ── */
-.workstation-focus-banner {
-  background: rgba(22, 10, 14, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 75, 85, 0.45);
-  border-left: 3px solid var(--status-crit);
-  padding: 12px 18px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 14px rgba(255, 75, 85, 0.15);
-  animation: bannerSlide 0.3s ease-out;
-}
-.workstation-focus-banner.banner-warn {
-  background: rgba(22, 18, 10, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-color: rgba(245, 185, 66, 0.4);
-  border-left-color: var(--status-warn);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 14px rgba(245, 185, 66, 0.12);
-}
-.focus-banner-left { display: flex; align-items: center; gap: 14px; }
-.focus-beacon { display: inline-flex; align-items: center; justify-content: center; }
 .pulse-dot {
   display: inline-block;
   width: 8px;
@@ -1055,27 +1059,9 @@ h1, h2, h3, h4 {
   0%, 100% { opacity: 0.6; transform: scale(0.9); }
   50% { opacity: 1; transform: scale(1.15); }
 }
-.focus-banner-text { display: flex; flex-direction: column; gap: 2px; }
-.focus-banner-text strong { font-size: 0.92rem; color: #fff; letter-spacing: 0.04em; font-family: var(--font-mono); }
-.focus-banner-text span { font-size: 0.8rem; color: var(--text-sec); }
-.banner-focus-btn {
-  background: rgba(0, 246, 255, 0.12);
-  color: var(--cyan);
-  border: 1px solid var(--cyan);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-.banner-focus-btn:hover {
-  background: var(--cyan);
-  color: #000;
-  box-shadow: 0 0 14px rgba(0, 246, 255, 0.5);
+
+.workstation-focus-banner {
+  display: none !important;
 }
 
 /* Action Box & Operational Directives (Enlarged & Focused on Anomaly) */

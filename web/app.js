@@ -559,9 +559,6 @@ function renderActionCommands(a) {
   const tierEl = $("overview-action-tier");
   const headlineEl = $("overview-action-headline");
   const listEl = $("overview-commands-list");
-  const focusBanner = $("workstation-focus-banner");
-  const focusTitle = $("focus-banner-title");
-  const focusSub = $("focus-banner-sub");
   if (!box || !a) return;
 
   const o = a.overall;
@@ -582,7 +579,6 @@ function renderActionCommands(a) {
         <li><span class="cmd-badge">ROUTINE</span> Log scheduled 30-second daily biometric check-in.</li>
       `;
     }
-    if (focusBanner) focusBanner.style.display = "none";
     return;
   }
 
@@ -596,30 +592,6 @@ function renderActionCommands(a) {
   } else {
     box.classList.add("tier-warn");
     if (tierEl) tierEl.textContent = `TIER ${tier} WATCH`;
-  }
-
-  // Update Workstation Focus Banner
-  if (focusBanner) {
-    focusBanner.style.display = "flex";
-    focusBanner.className = `workstation-focus-banner ${isCrit ? "" : "banner-warn"}`;
-    if (focusTitle) {
-      focusTitle.textContent = isCrit
-        ? `CRITICAL PHYSIOLOGICAL ALERT: ${domainName.toUpperCase()}`
-        : `WATCH RISK DETECTED: ${domainName.toUpperCase()}`;
-    }
-    if (focusSub) {
-      focusSub.textContent = isCrit
-        ? "Immediate crew intervention protocol required — Actionable remediation commands prioritized below."
-        : "Autonomous trajectory drift detected — Review preventative countermeasure procedures below.";
-    }
-    const btn = $("btn-scroll-commands");
-    if (btn) {
-      btn.onclick = () => {
-        box.scrollIntoView({ behavior: "smooth", block: "center" });
-        box.style.transform = "scale(1.05)";
-        setTimeout(() => (box.style.transform = ""), 600);
-      };
-    }
   }
 
   const headline = isCrit
