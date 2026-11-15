@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASTRA — Astronaut Health Intelligence System</title>
+<title>ASTRA — Astronaut Vital Telemetry &amp; Mission Health</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#07111C">
 <link rel="icon" href="icon.svg">
@@ -17,56 +17,57 @@
        TOP AEROSPACE NAVIGATION BAR (Minimal, Focused)
        ============================================================ -->
   <header class="app-header">
-    <div class="header-left">
-      <div class="brand-item">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="#36E6D0" stroke-width="2"/>
-            <path d="M12 4L14.5 9.5L20 12L14.5 14.5L12 20L9.5 14.5L4 12L9.5 9.5L12 4Z" fill="#36E6D0"/>
-          </svg>
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="brand-item">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#36E6D0" stroke-width="2"/>
+              <path d="M12 4L14.5 9.5L20 12L14.5 14.5L12 20L9.5 14.5L4 12L9.5 9.5L12 4Z" fill="#36E6D0"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">ASTRA</span>
+          </div>
         </div>
-        <div class="brand-text">
-          <span class="brand-title">ASTRA</span>
-          <span class="brand-sub">HEALTH INTELLIGENCE</span>
+
+        <!-- Core 4 Tabs (Option A) -->
+        <nav class="top-nav" aria-label="Main Navigation">
+          <button class="nav-item active" data-tab="tab-overview">
+            <span class="nav-icon">⬚</span>
+            <span class="nav-label">Overview & Digital Twin</span>
+          </button>
+          <button class="nav-item" data-tab="tab-monitoring">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Telemetry Matrix</span>
+          </button>
+          <button class="nav-item" data-tab="tab-checkin">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">Daily Check-in</span>
+          </button>
+          <button class="nav-item" data-tab="tab-data">
+            <span class="nav-icon">📡</span>
+            <span class="nav-label">Ground Transmission</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <div class="header-meta-text">
+          <span id="header-date">Mission Day 30 of 180</span> · <span id="header-phase">Outbound Cruise</span>
         </div>
+
+        <!-- Timeline Quick Scrubber Dropdown/Controls in Header -->
+        <div class="header-timeline-ctrl">
+          <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">▶ Play</button>
+          <input type="range" min="1" max="180" value="30" id="tl-slider" class="timeline-slider header-slider" aria-label="180-Day Mission Trajectory Scrubber">
+        </div>
+
+        <!-- Essential Utilities -->
+        <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">🚨 Ground Alert</button>
+        <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">👥 Crew</button>
+        <button id="mute-toggle-btn" class="header-action-btn icon-only" title="Toggle Audio Alarms">🔊</button>
       </div>
-
-      <!-- Core 4 Tabs (Option A) -->
-      <nav class="top-nav" aria-label="Main Navigation">
-        <button class="nav-item active" data-tab="tab-overview">
-          <span class="nav-icon">⬚</span>
-          <span class="nav-label">Overview & Digital Twin</span>
-        </button>
-        <button class="nav-item" data-tab="tab-monitoring">
-          <span class="nav-icon">📊</span>
-          <span class="nav-label">Telemetry Matrix</span>
-        </button>
-        <button class="nav-item" data-tab="tab-checkin">
-          <span class="nav-icon">📋</span>
-          <span class="nav-label">Daily Check-in</span>
-        </button>
-        <button class="nav-item" data-tab="tab-data">
-          <span class="nav-icon">📡</span>
-          <span class="nav-label">Ground Transmission</span>
-        </button>
-      </nav>
-    </div>
-
-    <div class="header-right">
-      <div class="header-meta-text">
-        <span id="header-date">Mission Day 30 of 180</span> · <span id="header-phase">Outbound Cruise</span>
-      </div>
-
-      <!-- Timeline Quick Scrubber Dropdown/Controls in Header -->
-      <div class="header-timeline-ctrl">
-        <button id="tl-play-btn" class="header-action-btn primary" title="Play 180-Day Simulation">▶ Play</button>
-        <input type="range" min="1" max="180" value="30" id="tl-slider" class="timeline-slider header-slider" aria-label="180-Day Mission Trajectory Scrubber">
-      </div>
-
-      <!-- Essential Utilities -->
-      <button id="quick-escalate-btn" class="header-action-btn danger" title="Ground Emergency Escalation">🚨 Ground Alert</button>
-      <button id="crew-ripple-btn" class="header-action-btn" title="Compare Crew Biometrics">👥 Crew</button>
-      <button id="mute-toggle-btn" class="header-action-btn icon-only" title="Toggle Audio Alarms">🔊</button>
     </div>
   </header>
 
@@ -166,13 +167,22 @@
               <span class="phys-status ok" id="live-spo2-status">● OPTIMAL</span>
             </div>
 
+            <div class="flank-readout-card">
+              <span class="phys-lbl">HEART RATE VARIABILITY</span>
+              <div class="phys-val-row">
+                <strong class="phys-num" id="live-hrv-val">58</strong>
+                <span class="phys-unit">ms</span>
+              </div>
+              <span class="phys-status ok" id="live-hrv-status">● OPTIMAL TONE</span>
+            </div>
+
             <!-- ECG Mini Oscilloscope -->
             <div class="flank-ecg-card">
               <div class="ecg-header">
                 <span class="ecg-title">ECG / LEAD II MONITOR</span>
                 <span class="ecg-speed">25 mm/s</span>
               </div>
-              <canvas id="ecg-canvas" width="280" height="80" class="ecg-canvas"></canvas>
+              <canvas id="ecg-canvas" width="280" height="76" class="ecg-canvas"></canvas>
             </div>
           </div>
 
@@ -237,7 +247,7 @@
                 </g>
               </svg>
 
-              <!-- Anatomical Callouts -->
+              <!-- Anatomical Callouts (Symmetrically Positioned) -->
               <div class="twin-callouts-overlay">
                 <div class="twin-callout top-left" data-target="brain">
                   <span class="callout-tag">01 / CRANIAL</span>
@@ -254,13 +264,18 @@
                   <span class="callout-val" id="callout-imm-val">36.6 °C · NOMINAL</span>
                   <span class="callout-sub">Fatigue 3.0 · Hydration 8gl</span>
                 </div>
+                <div class="twin-callout top-right" data-target="brain">
+                  <span class="callout-tag">04 / OCULAR & SANS</span>
+                  <span class="callout-val" id="callout-sans-val">OPTIC NERVE OK</span>
+                  <span class="callout-sub">ICP Baseline · Acuity 20/20</span>
+                </div>
                 <div class="twin-callout mid-right" data-target="lungs">
-                  <span class="callout-tag">04 / HABITAT AIRWAY</span>
+                  <span class="callout-tag">05 / HABITAT AIRWAY</span>
                   <span class="callout-val" id="callout-lungs-val">CO2: 3.0 mmHg</span>
                   <span class="callout-sub">Nominal Cabin Quality</span>
                 </div>
                 <div class="twin-callout bottom-right" data-target="legs">
-                  <span class="callout-tag">05 / MUSCULOSKELETAL</span>
+                  <span class="callout-tag">06 / MUSCULOSKELETAL</span>
                   <span class="callout-val" id="callout-msk-val">Grip: 40.0 kg</span>
                   <span class="callout-sub">Daily Exercise: 110 min</span>
                 </div>
@@ -502,7 +517,7 @@
           <p class="mu">Space Radiation Monitoring & Biodosimetry alignment.</p>
         </div>
         <div class="footer-col">
-          <span class="mu">ASTRA Health Intelligence · Prototype built for NASA Space Apps · Decision support only.</span>
+          <span class="mu">ASTRA · Autonomous Space Health Support · Prototype built for NASA Space Apps · Decision support only.</span>
         </div>
       </div>
     </footer>

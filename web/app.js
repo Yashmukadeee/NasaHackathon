@@ -1,5 +1,5 @@
 /**
- * ASTRA — Astronaut Health Intelligence System
+ * ASTRA — Astronaut Vital Telemetry & Autonomous Decision Support System
  * web/app.js — Flight Deck Application Controller (Complete Frontend Transformation)
  *
  * Implements:
@@ -229,12 +229,14 @@ function renderKpiCards(a) {
 function renderLivePhysiology(t) {
   const hr = mission.series.hr ? (mission.series.hr[t - 1] ?? 62) : 62;
   const spo2 = mission.series.spo2 ? (mission.series.spo2[t - 1] ?? 98.2) : 98.2;
+  const hrv = mission.series.hrv ? (mission.series.hrv[t - 1] ?? 58) : 58;
   const sbp = mission.series.sbp ? (mission.series.sbp[t - 1] ?? 118) : 118;
   const dbp = mission.series.dbp ? (mission.series.dbp[t - 1] ?? 76) : 76;
   const temp = mission.series.temp ? (mission.series.temp[t - 1] ?? 36.6) : 36.6;
 
   if ($("live-hr-val")) $("live-hr-val").textContent = Math.round(hr);
   if ($("live-spo2-val")) $("live-spo2-val").textContent = spo2.toFixed(1);
+  if ($("live-hrv-val")) $("live-hrv-val").textContent = Math.round(hrv);
   if ($("live-bp-val")) $("live-bp-val").textContent = `${Math.round(sbp)}/${Math.round(dbp)}`;
   if ($("live-temp-val")) $("live-temp-val").textContent = temp.toFixed(1);
 
@@ -243,6 +245,26 @@ function renderLivePhysiology(t) {
     const hrDrift = ctx.drift.hr ? ctx.drift.hr[t - 1] : 0;
     $("live-hr-status").className = `phys-status ${cls(hrDrift >= C.red ? 2 : hrDrift >= C.amber ? 1 : 0)}`;
     $("live-hr-status").textContent = hrDrift >= C.red ? "▲ ELEVATED" : hrDrift >= C.amber ? "▲ DRIFTING" : "● NOMINAL";
+  }
+  if ($("live-spo2-status")) {
+    const spo2Drift = ctx.drift.spo2 ? ctx.drift.spo2[t - 1] : 0;
+    $("live-spo2-status").className = `phys-status ${cls(spo2Drift >= C.red ? 2 : spo2Drift >= C.amber ? 1 : 0)}`;
+    $("live-spo2-status").textContent = spo2Drift >= C.red ? "▼ HYPOXIC" : spo2Drift >= C.amber ? "▼ LOW WATCH" : "● OPTIMAL";
+  }
+  if ($("live-hrv-status")) {
+    const hrvDrift = ctx.drift.hrv ? ctx.drift.hrv[t - 1] : 0;
+    $("live-hrv-status").className = `phys-status ${cls(hrvDrift >= C.red ? 2 : hrvDrift >= C.amber ? 1 : 0)}`;
+    $("live-hrv-status").textContent = hrvDrift >= C.red ? "▼ DEPRESSED TONE" : hrvDrift >= C.amber ? "▼ FATIGUE STRAIN" : "● OPTIMAL TONE";
+  }
+  if ($("live-bp-status")) {
+    const sbpDrift = ctx.drift.sbp ? ctx.drift.sbp[t - 1] : 0;
+    $("live-bp-status").className = `phys-status ${cls(sbpDrift >= C.red ? 2 : sbpDrift >= C.amber ? 1 : 0)}`;
+    $("live-bp-status").textContent = sbpDrift >= C.red ? "▲ HYPERTENSIVE" : sbpDrift >= C.amber ? "▲ ELEVATED" : "● NORMOTENSIVE";
+  }
+  if ($("live-temp-status")) {
+    const tempDrift = ctx.drift.temp ? ctx.drift.temp[t - 1] : 0;
+    $("live-temp-status").className = `phys-status ${cls(tempDrift >= C.red ? 2 : tempDrift >= C.amber ? 1 : 0)}`;
+    $("live-temp-status").textContent = tempDrift >= C.red ? "▲ FEBRILE" : tempDrift >= C.amber ? "▲ LOW-GRADE" : "● AFEBRILE";
   }
 }
 

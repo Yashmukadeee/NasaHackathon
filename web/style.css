@@ -1,5 +1,5 @@
 /* ============================================================
-   ASTRA – ASTRONAUT HEALTH INTELLIGENCE SYSTEM
+   ASTRA – ASTRONAUT HEALTH & TELEMETRY SYSTEM
    Flight Deck CSS Design System (Reference 1 & Reference 2 Synthesis)
    ============================================================ */
 
@@ -93,13 +93,23 @@ h1, h2, h3, h4 {
   height: 64px;
   min-height: 64px;
   border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
   background: rgba(11, 23, 35, 0.95);
   backdrop-filter: blur(12px);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.header-inner {
+  max-width: 1560px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 20px;
 }
 
@@ -406,13 +416,13 @@ h1, h2, h3, h4 {
 
 .unified-body-readout-grid {
   display: grid;
-  grid-template-columns: 280px 1fr 340px;
+  grid-template-columns: 310px 1fr 310px;
   gap: 20px;
   align-items: stretch;
 }
 @media (max-width: 1200px) {
   .unified-body-readout-grid {
-    grid-template-columns: 240px 1fr 280px;
+    grid-template-columns: 260px 1fr 260px;
     gap: 16px;
   }
 }
@@ -427,7 +437,8 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  justify-content: flex-start;
+  justify-content: space-between;
+  height: 100%;
 }
 
 .flank-readout-card {
@@ -449,7 +460,7 @@ h1, h2, h3, h4 {
 }
 .flank-ecg-card .ecg-canvas {
   width: 100%;
-  height: 80px;
+  height: 76px;
   display: block;
 }
 
@@ -457,11 +468,12 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   position: relative;
+  justify-content: center;
 }
 
 .twin-viewport-container {
   position: relative;
-  height: 520px;
+  height: 560px;
   background: radial-gradient(circle at center, rgba(54, 230, 208, 0.08) 0%, rgba(7, 17, 28, 0.96) 75%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -473,7 +485,9 @@ h1, h2, h3, h4 {
 #anatomical-digital-twin-svg {
   width: 100%;
   height: 100%;
-  max-height: 520px;
+  max-height: 540px;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Scanning Plane Sweep Animation */
@@ -585,26 +599,30 @@ h1, h2, h3, h4 {
 }
 .twin-callout {
   position: absolute;
-  background: rgba(16, 35, 50, 0.88);
+  width: 210px;
+  background: rgba(16, 35, 50, 0.9);
   border: 1px solid var(--border-subtle);
   border-left: 3px solid var(--cyan);
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   pointer-events: auto;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0,0,0,0.55);
   backdrop-filter: blur(4px);
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  box-sizing: border-box;
 }
 .twin-callout:hover {
   transform: translateY(-2px);
   border-color: var(--cyan);
 }
 .twin-callout.top-left { top: 24px; left: 16px; }
-.twin-callout.mid-left { top: 160px; left: 16px; }
-.twin-callout.bottom-left { bottom: 40px; left: 16px; }
-.twin-callout.mid-right { top: 160px; right: 16px; border-left: 1px solid var(--border-subtle); border-right: 3px solid var(--electric); }
-.twin-callout.bottom-right { bottom: 40px; right: 16px; border-left: 1px solid var(--border-subtle); border-right: 3px solid var(--cyan); }
+.twin-callout.mid-left { top: 185px; left: 16px; }
+.twin-callout.bottom-left { bottom: 24px; left: 16px; }
+
+.twin-callout.top-right { top: 24px; right: 16px; border-left: 1px solid var(--border-subtle); border-right: 3px solid var(--cyan); }
+.twin-callout.mid-right { top: 185px; right: 16px; border-left: 1px solid var(--border-subtle); border-right: 3px solid var(--electric); }
+.twin-callout.bottom-right { bottom: 24px; right: 16px; border-left: 1px solid var(--border-subtle); border-right: 3px solid var(--cyan); }
 
 /* Callout Risk Glows */
 .twin-callout.callout-glow-warn {
@@ -998,7 +1016,7 @@ h1, h2, h3, h4 {
 }
 
 /* ============================================================
-   TAB 3: HEALTH INTELLIGENCE / CDSS
+   CLINICAL DECISION SUPPORT & REMEDIATION
    ============================================================ */
 .cdss-summary-grid {
   display: grid;
