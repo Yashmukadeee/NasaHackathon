@@ -14,6 +14,14 @@
 
 <body class="astra-body">
 
+<!-- Fullscreen Ambient Live Video Background (Deep Space Exploration) -->
+<div class="ambient-video-bg-container" aria-hidden="true">
+  <video id="ambient-video-bg" class="ambient-video-bg" autoplay muted loop playsinline preload="auto">
+    <source src="background.mp4" type="video/mp4">
+  </video>
+  <div class="ambient-video-scrim"></div>
+</div>
+
 <!-- Fullscreen Mission Preloader Video (Plays for 3 seconds then zooms in to main page) -->
 <div id="mission-preloader" class="preloader-overlay">
   <video id="preloader-video" class="preloader-video" autoplay muted playsinline preload="auto">
@@ -24,6 +32,7 @@
   (function() {
     var p = document.getElementById("mission-preloader");
     var v = document.getElementById("preloader-video");
+    var bg = document.getElementById("ambient-video-bg");
     var app = document.querySelector(".app-shell");
     var done = false;
     function dismiss() {
@@ -37,6 +46,11 @@
       }, 1400);
     }
     if (v) v.play().catch(function(){});
+    if (bg) {
+      bg.play().catch(function() {
+        window.addEventListener("click", function() { if (bg) bg.play(); }, { once: true });
+      });
+    }
     setTimeout(dismiss, 3000);
   })();
 </script>
