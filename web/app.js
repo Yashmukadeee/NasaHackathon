@@ -67,17 +67,17 @@ const ALL_METRICS_KEYS = [
   "headache", "co2", "dose"
 ];
 
-// Check-in form fields
+// Check-in form fields with clear categories and icons
 const CHECKIN_FIELDS = [
-  { k: "mood",      label: "Mood (0 Low, 10 High)",             min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "stress",    label: "Stress (0 Calm, 10 Extreme)",       min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "fat",       label: "Fatigue (0 Fresh, 10 Exhausted)",   min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "slp",       label: "Sleep Duration",                    min: 0,  max: 12,  step: 0.5, unit: "hours" },
-  { k: "sbp",       label: "Systolic Blood Pressure",           min: 90, max: 180, step: 1,   unit: "mmHg" },
-  { k: "dbp",       label: "Diastolic Blood Pressure",          min: 60, max: 120, step: 1,   unit: "mmHg" },
-  { k: "hydration", label: "Hydration Intake",                  min: 0,  max: 15,  step: 1,   unit: "glasses" },
-  { k: "nutrition", label: "Nutrition Score",                   min: 0,  max: 10,  step: 1,   unit: "/10" },
-  { k: "headache",  label: "Headache / Pressure Severity",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "mood",      icon: "😊", label: "Subjective Mood",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "stress",    icon: "🧘", label: "Workload Stress",      min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "fat",       icon: "🔋", label: "Physical Fatigue",     min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "slp",       icon: "🌙", label: "Sleep Rested",         min: 0,  max: 12,  step: 0.5, unit: "h" },
+  { k: "hydration", icon: "💧", label: "Hydration Intake",     min: 0,  max: 15,  step: 1,   unit: "gl" },
+  { k: "nutrition", icon: "🥗", label: "Nutrition Quality",    min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "headache",  icon: "🤕", label: "Headache / Pressure",  min: 0,  max: 10,  step: 1,   unit: "/10" },
+  { k: "sbp",       icon: "❤️", label: "Systolic BP",          min: 90, max: 180, step: 1,   unit: "mmHg" },
+  { k: "dbp",       icon: "🩺", label: "Diastolic BP",         min: 60, max: 120, step: 1,   unit: "mmHg" },
 ];
 
 // ── Sparkline Generator (SVG Vector Mini-Chart) ─────────────────────────────
@@ -476,6 +476,129 @@ function setupDigitalTwinInteractions() {
       if (hotspot) openInspector(hotspot.dataset.domain, target);
     });
   });
+}
+
+// ── Dynamic Physiological Risk Glow & Callout Synchronization ─────────────
+function updateDigitalTwinRiskGlow(a) {
+  if (!a || !a.domains) return;
+
+  // Domain map to target elements
+  const domainTargets = {
+    beh: { hotspot: $("hotspot-brain"), callout: document.querySelector('.twin-callout[data-target="brain"]'), valEl: $("callout-brain-val") },
+    car: { hotspot: $("hotspot-heart"), callout: document.querySelector('.twin-callout[data-target="heart"]'), valEl: $("callout-heart-val") },
+    env: { hotspot: $("hotspot-lungs"), callout: document.querySelector('.twin-callout[data-target="lungs"]'), valEl: $("callout-lungs-val") },
+    imm: { hotspot: $("hotspot-abdomen"), callout: document.querySelector('.twin-callout[data-target="abdomen"]'), valEl: $("callout-imm-val") },
+    msk: { hotspot: $("hotspot-legs"), callout: document.querySelector('.twin-callout[data-target="legs"]'), valEl: $("callout-msk-val") },
+  };
+
+  for (const dm in domainTargets) {
+    const item = domainTargets[dm];
+    const dom = a.domains[dm];
+    if (!dom || !item) continue;
+
+    const status = dom.status ?? -1;
+
+    // Reset glow classes
+    if (item.hotspot) {
+      item.hotspot.classList.remove("glow-ok", "glow-warn", "glow-crit");
+      if (status === 0 || status === LEARNING) {
+        item.hotspot.classList.add("glow-ok");
+      } else if (status === 1) {
+        item.hotspot.classList.add("glow-warn");
+      } else if (status === 2) {
+        item.hotspot.classList.add("glow-crit");
+      }
+    }
+
+    if (item.callout) {
+      item.callout.classList.remove("callout-glow-warn", "callout-glow-crit");
+      if (status === 1) {
+        item.callout.classList.add("callout-glow-warn");
+      } else if (status === 2) {
+        item.callout.classList.add("callout-glow-crit");
+      }
+    }
+  }
+
+  // Also sync arm hotspots for musculoskeletal (msk)
+  const armsHotspot = $("hotspot-arms");
+  if (armsHotspot && a.domains.msk) {
+    const mskStatus = a.domains.msk.status ?? -1;
+    armsHotspot.classList.remove("glow-ok", "glow-warn", "glow-crit");
+    if (mskStatus === 0 || mskStatus === LEARNING) armsHotspot.classList.add("glow-ok");
+    else if (mskStatus === 1) armsHotspot.classList.add("glow-warn");
+    else if (mskStatus === 2) armsHotspot.classList.add("glow-crit");
+  }
+}
+
+// ── Directive Commands Generator for Astronaut Actions ─────────────────────────
+function renderActionCommands(a) {
+  const box = $("overview-action-box");
+  const tierEl = $("overview-action-tier");
+  const headlineEl = $("overview-action-headline");
+  const listEl = $("overview-commands-list");
+  if (!box || !a) return;
+
+  const o = a.overall;
+  const wd = o.worstDomain;
+  const ws = a.domains[wd]?.status ?? 0;
+  const tier = o.tier;
+
+  // Box border style by tier
+  box.classList.remove("tier-warn", "tier-crit");
+  if (tier >= 2 || ws === 2) box.classList.add("tier-crit");
+  else if (tier === 1 || ws === 1) box.classList.add("tier-warn");
+
+  if (tierEl) tierEl.textContent = `TIER ${tier}`;
+
+  // If completely nominal
+  if (ws <= 0 && tier === 0) {
+    if (headlineEl) headlineEl.textContent = "All physiological biometrics within nominal flight baseline.";
+    if (listEl) {
+      listEl.innerHTML = `
+        <li><span class="cmd-badge">STABLE</span> Maintain standard resistive exercise (ARED) and sleep routine.</li>
+        <li><span class="cmd-badge">ROUTINE</span> Log scheduled 30-second daily biometric check-in.</li>
+      `;
+    }
+    return;
+  }
+
+  // Active risk detected: build specific actionable commands
+  const domainName = C.domains[wd] || wd;
+  const headline = ws === 2
+    ? `🚨 HIGH RISK: ${domainName.toUpperCase()} REQUIRES IMMEDIATE CREW COUNTERMEASURES`
+    : `⚠️ WATCH ALERT: ${domainName.toUpperCase()} DEVIATION DETECTED`;
+  if (headlineEl) headlineEl.textContent = headline;
+
+  // Fetch tiered action text from config
+  const tierActions = ws === 2 ? C.actions[wd]?.[1] : C.actions[wd]?.[0];
+  const commands = [];
+
+  if (tierActions && tierActions.length) {
+    tierActions.forEach((act, idx) => {
+      const badgeType = ws === 2 ? "crit" : "warn";
+      const badgeText = ws === 2 ? `ACTION 0${idx + 1}` : `STEP 0${idx + 1}`;
+      commands.push(`<li><span class="cmd-badge ${badgeType}">${badgeText}</span> ${act}</li>`);
+    });
+  }
+
+  // Multi-domain synergy additions
+  if (a.domains.imm?.status >= 1) {
+    commands.push(`<li><span class="cmd-badge ${a.domains.imm.status === 2 ? "crit" : "warn"}">HYDRATION</span> Increase fluid intake (+500 mL) to support renal and lymphatic clearance.</li>`);
+  }
+  if (a.domains.env?.status >= 1) {
+    commands.push(`<li><span class="cmd-badge ${a.domains.env.status === 2 ? "crit" : "warn"}">ECLSS</span> Inspect cabin airflow ventilation ducts and verify regenerative CO₂ scrubber bed status.</li>`);
+  }
+  if (a.domains.msk?.status >= 1) {
+    commands.push(`<li><span class="cmd-badge ${a.domains.msk.status === 2 ? "crit" : "warn"}">LOADING</span> Complete mandatory 120-minute resistive loading on ARED to prevent bone demineralization.</li>`);
+  }
+  if (a.spe) {
+    commands.unshift(`<li><span class="cmd-badge crit">IMMEDIATE</span> Move entire crew to water-shielded storm shelter module until dosimeter rates subside.</li>`);
+  }
+
+  if (listEl) {
+    listEl.innerHTML = commands.slice(0, 4).join("");
+  }
 }
 
 // ── High-Precision Health Monitoring View (Part 7) ──────────────────────────
@@ -895,24 +1018,35 @@ function setupSyncHandlers() {
   });
 }
 
-// ── Daily Check-in Setup (Part 9) ───────────────────────────────────────────
+// ── Daily Check-in Setup (Part 9 - Polished & User-Friendly) ─────────────────
 function setupCheckinForm() {
   const container = $("full-checkin-fields");
   if (!container) return;
 
-  container.innerHTML = CHECKIN_FIELDS.map(({ k, label, min, max, step, unit }) => {
+  container.innerHTML = CHECKIN_FIELDS.map(({ k, icon, label, min, max, step, unit }) => {
     const curVal = mission.series[k]
       ? (mission.series[k][T - 1] ?? (ctx.base[k] ? +ctx.base[k].mean.toFixed(1) : min))
       : min;
 
     return `
       <div class="field-wrap">
-        <label for="ci_${k}">${label}: <strong id="val_${k}" style="color:var(--cyan)">${curVal} ${unit}</strong></label>
-        <input id="ci_${k}" type="range" min="${min}" max="${max}" step="${step}" value="${curVal}">
+        <div class="field-header-row">
+          <div class="field-name-wrap">
+            <span class="field-icon">${icon}</span>
+            <span class="field-title">${label}</span>
+          </div>
+          <span class="field-value-badge" id="val_${k}">${curVal} ${unit}</span>
+        </div>
+        <div class="field-controls-row">
+          <button type="button" class="step-btn" data-step="-${step}" data-key="${k}">−</button>
+          <input id="ci_${k}" class="field-slider" type="range" min="${min}" max="${max}" step="${step}" value="${curVal}">
+          <button type="button" class="step-btn" data-step="${step}" data-key="${k}">+</button>
+        </div>
       </div>
     `;
   }).join("");
 
+  // Setup input live binding
   CHECKIN_FIELDS.forEach(({ k, unit }) => {
     const inp = $("ci_" + k);
     const val = $("val_" + k);
@@ -922,6 +1056,45 @@ function setupCheckinForm() {
       };
     }
   });
+
+  // Setup +/- Step Buttons
+  container.querySelectorAll(".step-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const k = btn.dataset.key;
+      const stepVal = Number(btn.dataset.step);
+      const inp = $("ci_" + k);
+      const fieldDef = CHECKIN_FIELDS.find(f => f.k === k);
+      if (inp && fieldDef) {
+        const next = Math.max(fieldDef.min, Math.min(fieldDef.max, Number(inp.value) + stepVal));
+        inp.value = next;
+        inp.dispatchEvent(new Event("input"));
+      }
+    });
+  });
+
+  // Quick Preset Handlers
+  $("preset-nominal")?.addEventListener("click", () => {
+    applyCheckinPreset({ mood: 8, stress: 2, fat: 2, slp: 8, sbp: 118, dbp: 76, hydration: 10, nutrition: 8, headache: 0 }, ["None"]);
+  });
+  $("preset-fatigued")?.addEventListener("click", () => {
+    applyCheckinPreset({ mood: 6, stress: 5, fat: 8, slp: 5.5, sbp: 124, dbp: 82, hydration: 6, nutrition: 6, headache: 3 }, ["Fatigue", "BackPain"]);
+  });
+  $("preset-stress")?.addEventListener("click", () => {
+    applyCheckinPreset({ mood: 4, stress: 8, fat: 6, slp: 6, sbp: 132, dbp: 88, hydration: 7, nutrition: 5, headache: 5 }, ["Headache", "Fatigue"]);
+  });
+
+  function applyCheckinPreset(vals, symptomsList) {
+    for (const k in vals) {
+      const inp = $("ci_" + k);
+      if (inp) {
+        inp.value = vals[k];
+        inp.dispatchEvent(new Event("input"));
+      }
+    }
+    document.querySelectorAll("#symptoms-chips input").forEach((cb) => {
+      cb.checked = symptomsList.includes(cb.value);
+    });
+  }
 
   $("checkin-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1085,6 +1258,9 @@ function render() {
   // 1. Render Top KPI Summary Cards (Part 4B)
   renderKpiCards(a);
 
+  // 1b. Update Digital Twin Physiological Risk Glows & Callouts
+  updateDigitalTwinRiskGlow(a);
+
   // 2. Render Live Physiology Panel (Part 6)
   renderLivePhysiology(t);
 
@@ -1097,15 +1273,8 @@ function render() {
   // 5. Render Overview Triage Table
   renderOverviewTriageTable(a);
 
-  // 6. Action Box Recommendation
-  if ($("overview-action-tier")) $("overview-action-tier").textContent = `TIER ${o.tier}`;
-  if ($("overview-action-text")) {
-    const wd = o.worstDomain, ws = a.domains[wd].status;
-    $("overview-action-text").textContent =
-      ws >= 1
-        ? `${C.actions[wd][ws === 2 ? 1 : 0][0]} (${C.domains[wd]})`
-        : "Maintain nominal flight conditioning and sleep routine. Log daily check-in.";
-  }
+  // 6. Action Box & Operational Directive Commands (Render actionable step-by-step guidance)
+  renderActionCommands(a);
 
   // 7. Active Concerns List
   const concernsList = $("overview-concerns-list");
@@ -1160,10 +1329,10 @@ async function init() {
     // 4. Prepare analytics context
     ctx = prepare(mission.series);
 
-    // 5. Setup Sidebar Navigation
-    document.querySelectorAll(".sidebar-nav .nav-item").forEach((btn) => {
+    // 5. Setup Top Navigation (Option A)
+    document.querySelectorAll(".top-nav .nav-item").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".sidebar-nav .nav-item").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".top-nav .nav-item").forEach((b) => b.classList.remove("active"));
         document.querySelectorAll(".view-panel").forEach((p) => p.classList.remove("active"));
 
         btn.classList.add("active");
